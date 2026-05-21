@@ -19,13 +19,15 @@ public class Npc {
     int chatIndex = 0;
     private Image[] image;
     private String[] words;
+    private String imagePath;
 
-    public Npc(String[] words, Image[] image, int x, int y, String name) {
+    public Npc(String[] words, Image[] image, int x, int y, String name, String imagePath) {
         this.words = words;
         this.image = image;
         this.x = x;
         this.y = y;
         this.name = name;
+        this.imagePath = imagePath;
     }
 
     public int getX() {
@@ -77,5 +79,18 @@ public class Npc {
 
     public void setChatOver(boolean b) {
         chatOver = b;
+    }
+
+    public void flushImages() {
+        if (image != null) {
+            for (int i = 0; i < image.length; i++) {
+                if (image[i] != null) {
+                    image[i].flush();
+                }
+            }
+            if (imagePath != null) {
+                ImageCache.flushImageArray(imagePath, image.length);
+            }
+        }
     }
 }

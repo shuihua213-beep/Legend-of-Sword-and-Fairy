@@ -1,13 +1,10 @@
 package cn.tedu.xjqxz;
 
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
 
 /**
  * 游戏项目的画板类，即界面文件
@@ -52,11 +49,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     private static Image[] ljcMall = new Image[3];
     private static Image chat;
     private static Image[][] role = new Image[4][8];
-    private static Image[] aws = new Image[17];
-    private static Image[] azu = new Image[6];
     private static Image[] hen = new Image[6];
-    private static Image[] wcs = new Image[14];
-    private static Image[] children = new Image[4];
     private static Image[] chick = new Image[2];
     private static Image[] littleChick = new Image[2];
 
@@ -70,89 +63,121 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     private static String[] wcsWords = {"Hi", "I'm washing clothes."};
     private static String[] childrenWords = {"Are you ok ?", "Let's play !"};
 
+    // 图片路径常量
+    private static final String PATH_LJC_MAP = "img/LiJiaCun/RedMap.png";
+    private static final String PATH_MALL_MAP = "img/LiJiaCunShiChang/RedMap.png";
+    private static final String PATH_LJC = "img/LiJiaCun/0.png";
+    private static final String PATH_LJC_MALL = "img/LiJiaCunShiChang/";
+    private static final String[] PATH_ROLE = {
+        "img/LiXiaoYao_Down/",
+        "img/LiXiaoYao_Left/",
+        "img/LiXiaoYao_Right/",
+        "img/LiXiaoYao_Up/"
+    };
+    private static final String PATH_AWS = "img/AWangShen/";
+    private static final String PATH_AZU = "img/AZhu/";
+    private static final String PATH_HEN = "img/MuJi/";
+    private static final String PATH_WCS = "img/WangCaiSao/";
+    private static final String PATH_CHILDREN = "img/XiaoHai/";
+    private static final String PATH_CHICK = "img/XiaoJi/";
+    private static final String PATH_LITTLE_CHICK = "img/XiaoXiaoJi/";
+    private static final String PATH_CHAT = "img/LiaoTian/0.png";
+
     /**
      * 加载素材图片
      */
-    static {
-        try {
-            dataMap[0] = ImageIO.read(new File("img/LiJiaCun/RedMap.png"));
-            dataMap[1] = ImageIO.read(new File("img/LiJiaCunShiChang/RedMap.png"));
+    private void loadImages() {
+        dataMap[0] = ImageCache.getBufferedImage(PATH_LJC_MAP);
+        dataMap[1] = ImageCache.getBufferedImage(PATH_MALL_MAP);
 
-            ljc = ImageIO.read(new File("img/LiJiaCun/0.png"));
+        ljc = ImageCache.getImage(PATH_LJC);
 
-            for (int i = 0; i < 3; i++) {
-                ljcMall[i] = ImageIO.read(new File("img/LiJiaCunShiChang/" + i + ".png"));
-            }
-
-            // 读取李逍遥图片
-            for (int i = 0; i < 4; i++) {
-                String pathname = "";
-                switch (i) {
-                    case 0:
-                        pathname = "img/LiXiaoYao_Down/";
-                        break;
-                    case 1:
-                        pathname = "img/LiXiaoYao_Left/";
-                        break;
-                    case 2:
-                        pathname = "img/LiXiaoYao_Right/";
-                        break;
-                    case 3:
-                        pathname = "img/LiXiaoYao_Up/";
-                        break;
-                }
-                for (int j = 0; j < 8; j++) {
-                    role[i][j] = ImageIO.read(new File(pathname + j + ".png"));
-                }
-            }
-
-            for (int i = 0; i < 17; i++) {
-                String pathname = "img/AWangShen/" + i + ".png";
-                aws[i] = ImageIO.read(new File(pathname));
-            }
-
-            for (int i = 0; i < 6; i++) {
-                String pathname = "img/AZhu/" + i + ".png";
-                azu[i] = ImageIO.read(new File(pathname));
-            }
-
-            for (int i = 0; i < 6; i++) {
-                String pathname = "img/MuJi/" + i + ".png";
-                hen[i] = ImageIO.read(new File(pathname));
-            }
-
-            for (int i = 0; i < 14; i++) {
-                String pathname = "img/WangCaiSao/" + i + ".png";
-                wcs[i] = ImageIO.read(new File(pathname));
-            }
-
-            for (int i = 0; i < 4; i++) {
-                String pathname = "img/XiaoHai/" + i + ".png";
-                children[i] = ImageIO.read(new File(pathname));
-            }
-
-            for (int i = 0; i < 2; i++) {
-                String pathname = "img/XiaoJi/" + i + ".png";
-                chick[i] = ImageIO.read(new File(pathname));
-            }
-
-            for (int i = 0; i < 2; i++) {
-                String pathname = "img/XiaoXiaoJi/" + i + ".png";
-                littleChick[i] = ImageIO.read(new File(pathname));
-            }
-
-            chat = ImageIO.read(new File("img/LiaoTian/0.png"));
-
-            npc[0] = new Npc(awsWords, aws, 750, 480, "阿旺婶");
-            npc[1] = new Npc(azuWords, azu, 560, 510, "阿朱");
-            npc[2] = new Npc(wcsWords, wcs, 1030, 710, "旺财嫂");
-            npc[3] = new Npc(childrenWords, children, 1160, 770, "熊孩子");
-        } catch (IOException e) {
-            e.printStackTrace();
+        for (int i = 0; i < 3; i++) {
+            ljcMall[i] = ImageCache.getImage(PATH_LJC_MALL + i + ".png");
         }
+
+        // 读取李逍遥图片
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 8; j++) {
+                role[i][j] = ImageCache.getImage(PATH_ROLE[i] + j + ".png");
+            }
+        }
+
+        Image[] aws = ImageCache.loadImageArray(PATH_AWS, 17);
+        Image[] azu = ImageCache.loadImageArray(PATH_AZU, 6);
+        Image[] wcs = ImageCache.loadImageArray(PATH_WCS, 14);
+        Image[] children = ImageCache.loadImageArray(PATH_CHILDREN, 4);
+
+        for (int i = 0; i < 6; i++) {
+            hen[i] = ImageCache.getImage(PATH_HEN + i + ".png");
+        }
+
+        for (int i = 0; i < 2; i++) {
+            chick[i] = ImageCache.getImage(PATH_CHICK + i + ".png");
+            littleChick[i] = ImageCache.getImage(PATH_LITTLE_CHICK + i + ".png");
+        }
+
+        chat = ImageCache.getImage(PATH_CHAT);
+
+        npc[0] = new Npc(awsWords, aws, 750, 480, "阿旺婶", PATH_AWS);
+        npc[1] = new Npc(azuWords, azu, 560, 510, "阿朱", PATH_AZU);
+        npc[2] = new Npc(wcsWords, wcs, 1030, 710, "旺财嫂", PATH_WCS);
+        npc[3] = new Npc(childrenWords, children, 1160, 770, "熊孩子", PATH_CHILDREN);
+    }
+
+    /**
+     * 释放李家村场景的图片资源
+     */
+    private void releaseLiJiaCunImages() {
+        for (int i = 0; i < 6; i++) {
+            if (hen[i] != null) {
+                hen[i].flush();
+            }
+        }
+        for (int i = 0; i < 2; i++) {
+            if (chick[i] != null) {
+                chick[i].flush();
+            }
+            if (littleChick[i] != null) {
+                littleChick[i].flush();
+            }
+        }
+        for (Npc n : npc) {
+            n.flushImages();
+        }
+        ImageCache.flushImage(PATH_LJC);
+        ImageCache.flushImageArray(PATH_HEN, 6);
+        ImageCache.flushImageArray(PATH_CHICK, 2);
+        ImageCache.flushImageArray(PATH_LITTLE_CHICK, 2);
+    }
+
+    /**
+     * 释放市场场景的图片资源
+     */
+    private void releaseMarketImages() {
+        for (int i = 0; i < 3; i++) {
+            if (ljcMall[i] != null) {
+                ljcMall[i].flush();
+            }
+        }
+        ImageCache.flushImageArray(PATH_LJC_MALL, 3);
+    }
+
+    /**
+     * 切换场景时处理图片资源
+     */
+    private void switchScene(int newMapID) {
+        if (mapID == 1 && newMapID == 2) {
+            releaseLiJiaCunImages();
+        } else if (mapID == 2 && newMapID == 1) {
+            releaseMarketImages();
+        }
+        mapID = newMapID;
+        loadImages();
     }
 
     public GamePanel() {
+        loadImages();
         t = new Thread(this);
         t.start();
     }
@@ -359,11 +384,11 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         } else if (e.getKeyCode() == KeyEvent.VK_ENTER) {
             // 按下回车键判断是否切换场景
             if (mapID == 1 && role_x >= 1780 && role_x <= 1855 && role_y >= 530 && role_y <= 615) {
-                mapID = 2;
+                switchScene(2);
                 role_x = 0;
                 role_y = 600;
             } else if (mapID == 2 && role_x == -16 && role_y >= 552 && role_y <= 704) {
-                mapID = 1;
+                switchScene(1);
                 role_x = 1795;
                 role_y = 570;
             }
