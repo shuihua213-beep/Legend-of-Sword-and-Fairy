@@ -1,0 +1,150 @@
+diff --git a/src/cn/tedu/xjqxz/GamePanel.java b/src/cn/tedu/xjqxz/GamePanel.java
+index d3300ce..d2f1fc4 100644
+--- a/src/cn/tedu/xjqxz/GamePanel.java
++++ b/src/cn/tedu/xjqxz/GamePanel.java
+@@ -16,6 +16,8 @@ import java.io.IOException;
+  */
+ public class GamePanel extends JPanel implements Runnable, KeyListener {
+     Thread t;
++    private BufferStrategy bufferStrategy;
++    private volatile boolean running = false;
+     int role_dir = 0;
+     int role_i = 0;
+     int role_x = 152;
+@@ -153,6 +155,15 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+     }
+ 
+     public GamePanel() {
++        setIgnoreRepaint(true);
++    }
++
++    @Override
++    public void addNotify() {
++        super.addNotify();
++        createBufferStrategy(2);
++        bufferStrategy = getBufferStrategy();
++        running = true;
+         t = new Thread(this);
+         t.start();
+     }
+@@ -194,10 +205,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+         }
+     }
+ 
+-    @Override
+-    public void paint(Graphics g) {
+-        super.paint(g);
+-
++    public void draw(Graphics g) {
+         // 场景在李家村
+         if (mapID == 1) {
+             // 背景绘制
+@@ -273,6 +281,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+         }
+     }
+ 
++    @Override
++    public void paintComponent(Graphics g) {
++    }
++
+     /**
+      * 检测主角是否靠近npc发起对话
+      * 碰撞检测
+@@ -303,7 +315,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+ 
+     @Override
+     public void run() {
+-        while (true) {
++        while (running) {
+             changeSpeed++;
+ 
+             if (mapID == 1) {
+@@ -319,7 +331,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                 changeSpeed = 0;
+             }
+ 
+-            repaint();
++            render();
+             try {
+                 Thread.sleep(200);
+             } catch (InterruptedException e) {
+@@ -328,6 +340,23 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+         }
+     }
+ 
++    private void render() {
++        if (bufferStrategy == null) {
++            return;
++        }
++        Graphics g = null;
++        try {
++            g = bufferStrategy.getDrawGraphics();
++            g.clearRect(0, 0, getWidth(), getHeight());
++            draw(g);
++        } finally {
++            if (g != null) {
++                g.dispose();
++            }
++        }
++        bufferStrategy.show();
++    }
++
+     @Override
+     public void keyTyped(KeyEvent e) {
+ 
+@@ -355,7 +384,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                     hasChat = false;
+                 }
+             }
+-            repaint();
+         } else if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+             // 按下回车键判断是否切换场景
+             if (mapID == 1 && role_x >= 1780 && role_x <= 1855 && role_y >= 530 && role_y <= 615) {
+@@ -367,7 +395,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                 role_x = 1795;
+                 role_y = 570;
+             }
+-            repaint();
+         }
+     }
+ 
+@@ -397,7 +424,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                 if (count[3] % 2 == 0) {
+                     updateRoleIndex();
+                 }
+-                repaint();
+                 break;
+ 
+             case KeyEvent.VK_DOWN:
+@@ -421,7 +447,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                 if (count[0] % 2 == 0) {
+                     updateRoleIndex();
+                 }
+-                repaint();
+                 break;
+ 
+             case KeyEvent.VK_LEFT:
+@@ -448,7 +473,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                         updateRoleIndex();
+                     }
+                 }
+-                repaint();
+                 break;
+ 
+             case KeyEvent.VK_RIGHT:
+@@ -474,7 +498,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                     updateRoleIndex();
+                 }
+ 
+-                repaint();
+                 break;
+ 
+             case KeyEvent.VK_ESCAPE:
+@@ -487,7 +510,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                         System.exit(0);
+                     }
+                 }
+-                repaint();
+                 break;
+         }
+     }
