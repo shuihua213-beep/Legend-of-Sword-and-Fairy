@@ -2,25 +2,19 @@ package cn.tedu.xjqxz;
 
 import java.awt.*;
 
-/**
- * 配角人物Npc 类
- *
- * @author fgksgf
- */
 public class Npc {
     private String name;
     private boolean chatOver = false;
 
-    // npc在背景图片中的坐标
     private int x;
     private int y;
 
     private int index = 0;
     int chatIndex = 0;
-    private Image[] image;
+    private CachedImage[] image;
     private String[] words;
 
-    public Npc(String[] words, Image[] image, int x, int y, String name) {
+    public Npc(String[] words, CachedImage[] image, int x, int y, String name) {
         this.words = words;
         this.image = image;
         this.x = x;
@@ -41,15 +35,15 @@ public class Npc {
     }
 
     public int getWidth() {
-        return image[0].getWidth(null);
+        return image[0].get().getWidth(null);
     }
 
     public int getHeight() {
-        return image[0].getHeight(null);
+        return image[0].get().getHeight(null);
     }
 
     public Image getImage() {
-        return image[index];
+        return image[index].get();
     }
 
     public void updateIndex() {
