@@ -1,0 +1,150 @@
+diff --git a/src/cn/tedu/xjqxz/GamePanel.java b/src/cn/tedu/xjqxz/GamePanel.java
+index d3300ce..12720ab 100644
+--- a/src/cn/tedu/xjqxz/GamePanel.java
++++ b/src/cn/tedu/xjqxz/GamePanel.java
+@@ -5,6 +5,7 @@ import javax.swing.*;
+ import java.awt.*;
+ import java.awt.event.KeyEvent;
+ import java.awt.event.KeyListener;
++import java.awt.image.BufferStrategy;
+ import java.awt.image.BufferedImage;
+ import java.io.File;
+ import java.io.IOException;
+@@ -14,7 +15,7 @@ import java.io.IOException;
+  *
+  * @author fgksgf
+  */
+-public class GamePanel extends JPanel implements Runnable, KeyListener {
++public class GamePanel extends Canvas implements Runnable, KeyListener {
+     Thread t;
+     int role_dir = 0;
+     int role_i = 0;
+@@ -153,6 +154,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+     }
+ 
+     public GamePanel() {
++        setIgnoreRepaint(true);
+         t = new Thread(this);
+         t.start();
+     }
+@@ -196,8 +198,15 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+ 
+     @Override
+     public void paint(Graphics g) {
+-        super.paint(g);
++        // Do nothing, we use active rendering
++    }
+ 
++    @Override
++    public void update(Graphics g) {
++        // Do nothing, we use active rendering
++    }
++
++    private void render(Graphics g) {
+         // 场景在李家村
+         if (mapID == 1) {
+             // 背景绘制
+@@ -301,6 +310,31 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+         return ret;
+     }
+ 
++    public void renderActive() {
++        if (!isDisplayable()) {
++            return;
++        }
++        BufferStrategy bs = getBufferStrategy();
++        if (bs == null) {
++            createBufferStrategy(2);
++            return;
++        }
++
++        do {
++            do {
++                Graphics g = bs.getDrawGraphics();
++                try {
++                    g.setColor(Color.BLACK);
++                    g.fillRect(0, 0, getWidth(), getHeight());
++                    render(g);
++                } finally {
++                    g.dispose();
++                }
++            } while (bs.contentsRestored());
++            bs.show();
++        } while (bs.contentsLost());
++    }
++
+     @Override
+     public void run() {
+         while (true) {
+@@ -319,7 +353,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                 changeSpeed = 0;
+             }
+ 
+-            repaint();
++            renderActive();
+             try {
+                 Thread.sleep(200);
+             } catch (InterruptedException e) {
+@@ -355,7 +389,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                     hasChat = false;
+                 }
+             }
+-            repaint();
++            renderActive();
+         } else if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+             // 按下回车键判断是否切换场景
+             if (mapID == 1 && role_x >= 1780 && role_x <= 1855 && role_y >= 530 && role_y <= 615) {
+@@ -367,7 +401,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                 role_x = 1795;
+                 role_y = 570;
+             }
+-            repaint();
++            renderActive();
+         }
+     }
+ 
+@@ -397,7 +431,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                 if (count[3] % 2 == 0) {
+                     updateRoleIndex();
+                 }
+-                repaint();
++                renderActive();
+                 break;
+ 
+             case KeyEvent.VK_DOWN:
+@@ -421,7 +455,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                 if (count[0] % 2 == 0) {
+                     updateRoleIndex();
+                 }
+-                repaint();
++                renderActive();
+                 break;
+ 
+             case KeyEvent.VK_LEFT:
+@@ -448,7 +482,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                         updateRoleIndex();
+                     }
+                 }
+-                repaint();
++                renderActive();
+                 break;
+ 
+             case KeyEvent.VK_RIGHT:
+@@ -474,7 +508,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                     updateRoleIndex();
+                 }
+ 
+-                repaint();
++                renderActive();
+                 break;
+ 
+             case KeyEvent.VK_ESCAPE:
+@@ -487,7 +521,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                         System.exit(0);
+                     }
+                 }
+-                repaint();
++                renderActive();
+                 break;
+         }
+     }
