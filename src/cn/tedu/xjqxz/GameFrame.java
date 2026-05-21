@@ -25,6 +25,7 @@ public class GameFrame {
         jFrame.setSize(width, height);
         jFrame.setLocationRelativeTo(null);
         jFrame.setResizable(false);
+        jFrame.setIgnoreRepaint(true);
         jFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 
         jFrame.addWindowListener(new WindowAdapter() {
