@@ -16,12 +16,10 @@ import java.io.IOException;
  */
 public class GamePanel extends JPanel implements Runnable, KeyListener {
     Thread t;
-    int role_dir = 0;
     int role_i = 0;
-    int role_x = 152;
-    int role_y = 704;
     int roleW = 60;
     int roleH = 108;
+    private MovementController movementController;
     int hen_i = 0;
     int chick_i = 0;
     int littleChick_i = 0;
@@ -30,9 +28,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     // 用于调节李家村市场场景变化速度
     int changeSpeed = 0;
     int[] count = new int[4];
-
-    // 当前背景, 1表示李家村，2表示李家村市场
-    int mapID = 1;
 
     // 聊天对象
     int chatWith = 0;
@@ -153,6 +148,13 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public GamePanel() {
+        RedMapWalkable walkableMap = new RedMapWalkable(dataMap);
+        movementController = new MovementController(
+            152, 704, 
+            role[0][0].getWidth(null), role[0][0].getHeight(null),
+            4, -16, Integer.MAX_VALUE, Integer.MIN_VALUE, Integer.MAX_VALUE, 
+            walkableMap
+        );
         t = new Thread(this);
         t.start();
     }
@@ -199,10 +201,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         super.paint(g);
 
         // 场景在李家村
-        if (mapID == 1) {
+        if (movementController.getMapID() == 1) {
             // 背景绘制
-            ljcX = (1024 - role[0][0].getWidth(null)) / 2 - role_x;
-            ljcY = (768 - role[0][0].getHeight(null)) / 2 - role_y;
+            ljcX = (1024 - role[0][0].getWidth(null)) / 2 - movementController.getRoleX();
+            ljcY = (768 - role[0][0].getHeight(null)) / 2 - movementController.getRoleY();
 
             //判断李家村图片的边界问题
             if (ljcY > 0) {
@@ -245,13 +247,15 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             }
 
             // 主角绘制
-            g.drawImage(role[role_dir][role_i], role_x + ljcX, role_y + ljcY, this);
+            g.drawImage(role[movementController.getDirection()][role_i], 
+                       movementController.getRoleX() + ljcX, 
+                       movementController.getRoleY() + ljcY, this);
 
-        } else if (mapID == 2) {
+        } else if (movementController.getMapID() == 2) {
             // 场景在李家村市场
 
-            mallX = (1024 - role[0][0].getWidth(null)) / 2 - role_x;
-            mallY = (768 - role[0][0].getHeight(null)) / 2 - role_y;
+            mallX = (1024 - role[0][0].getWidth(null)) / 2 - movementController.getRoleX();
+            mallY = (768 - role[0][0].getHeight(null)) / 2 - movementController.getRoleY();
 
             //判断李家村市场图片的边界问题
             if (mallY > 0) {
@@ -269,7 +273,9 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             g.drawImage(ljcMall[mall_i], mallX, mallY, this);
 
             // 主角绘制
-            g.drawImage(role[role_dir][role_i], role_x + mallX, role_y + mallY, this);
+            g.drawImage(role[movementController.getDirection()][role_i], 
+                       movementController.getRoleX() + mallX, 
+                       movementController.getRoleY() + mallY, this);
         }
     }
 
@@ -288,11 +294,13 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             int ay = n.getY() - d;
             int aw = n.getWidth() + d;
             int ah = n.getHeight() + d;
+            int rx = movementController.getRoleX();
+            int ry = movementController.getRoleY();
 
-            if ((role_x >= ax && role_x <= ax + aw && role_y >= ay && role_y <= ay + ah)
-                    || (role_x + roleW >= ax && role_x + roleW <= ax + aw && role_y >= ay && role_y <= ay + ah)
-                    || (role_x + roleW >= ax && role_x + roleW <= ax + aw && role_y + roleH >= ay && role_y + roleH <= ay + ah)
-                    || (role_x >= ax && role_x <= ax + aw && role_y >= ay && role_y <= ay + ah)) {
+            if ((rx >= ax && rx <= ax + aw && ry >= ay && ry <= ay + ah)
+                    || (rx + roleW >= ax && rx + roleW <= ax + aw && ry >= ay && ry <= ay + ah)
+                    || (rx + roleW >= ax && rx + roleW <= ax + aw && ry + roleH >= ay && ry + roleH <= ay + ah)
+                    || (rx >= ax && rx <= ax + aw && ry >= ay && ry <= ay + ah)) {
                 ret = true;
                 chatWith = i;
                 break;
@@ -306,9 +314,9 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         while (true) {
             changeSpeed++;
 
-            if (mapID == 1) {
+            if (movementController.getMapID() == 1) {
                 updateIndex();
-            } else if (mapID == 2 && changeSpeed % 5 == 0) {
+            } else if (movementController.getMapID() == 2 && changeSpeed % 5 == 0) {
                 mall_i++;
                 if (mall_i > 2) {
                     mall_i = 0;
@@ -358,14 +366,16 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             repaint();
         } else if (e.getKeyCode() == KeyEvent.VK_ENTER) {
             // 按下回车键判断是否切换场景
-            if (mapID == 1 && role_x >= 1780 && role_x <= 1855 && role_y >= 530 && role_y <= 615) {
-                mapID = 2;
-                role_x = 0;
-                role_y = 600;
-            } else if (mapID == 2 && role_x == -16 && role_y >= 552 && role_y <= 704) {
-                mapID = 1;
-                role_x = 1795;
-                role_y = 570;
+            int rx = movementController.getRoleX();
+            int ry = movementController.getRoleY();
+            if (movementController.getMapID() == 1 && rx >= 1780 && rx <= 1855 && ry >= 530 && ry <= 615) {
+                movementController.setMapID(2);
+                movementController.setRoleX(0);
+                movementController.setRoleY(600);
+            } else if (movementController.getMapID() == 2 && rx == -16 && ry >= 552 && ry <= 704) {
+                movementController.setMapID(1);
+                movementController.setRoleX(1795);
+                movementController.setRoleY(570);
             }
             repaint();
         }
@@ -373,23 +383,12 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
     @Override
     public void keyPressed(KeyEvent e) {
-        // 主角移动速度
-        final int speed = 4;
+        boolean moved = false;
 
         switch (e.getKeyCode()) {
             case KeyEvent.VK_UP:
-                role_dir = 3;
                 hasChat = false;
-                role_y -= speed;
-                int x = role_x + role[0][0].getWidth(null) / 2;
-                int y = role_y + role[0][0].getHeight(null);
-                if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
-                    role_y += speed;
-                } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
-                    role_y += speed;
-                }
-
-                // 调整角色步伐改变速度
+                moved = movementController.moveUp();
                 count[3]++;
                 if (count[3] > 100) {
                     count[3] = 0;
@@ -401,19 +400,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 break;
 
             case KeyEvent.VK_DOWN:
-                role_dir = 0;
                 hasChat = false;
-                role_y += speed;
-                x = role_x + role[0][0].getWidth(null) / 2;
-                y = role_y + role[0][0].getHeight(null);
-
-                if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
-                    role_y -= speed;
-                } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
-                    role_y -= speed;
-                }
-
-                // 调整角色步伐改变速度
+                moved = movementController.moveDown();
                 count[0]++;
                 if (count[0] > 100) {
                     count[0] = 0;
@@ -425,47 +413,21 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 break;
 
             case KeyEvent.VK_LEFT:
-                role_dir = 1;
                 hasChat = false;
-
-                if (role_x > -16) {
-                    role_x -= speed;
-                    x = role_x + role[0][0].getWidth(null) / 2;
-                    y = role_y + role[0][0].getHeight(null);
-
-                    if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
-                        role_x += speed;
-                    } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
-                        role_x += speed;
-                    }
-
-                    // 调整角色步伐改变速度
-                    count[1]++;
-                    if (count[1] > 100) {
-                        count[1] = 0;
-                    }
-                    if (count[1] % 2 == 0) {
-                        updateRoleIndex();
-                    }
+                moved = movementController.moveLeft();
+                count[1]++;
+                if (count[1] > 100) {
+                    count[1] = 0;
+                }
+                if (count[1] % 2 == 0) {
+                    updateRoleIndex();
                 }
                 repaint();
                 break;
 
             case KeyEvent.VK_RIGHT:
-                role_dir = 2;
                 hasChat = false;
-
-                role_x += speed;
-                x = role_x + role[0][0].getWidth(null) / 2;
-                y = role_y + role[0][0].getHeight(null);
-
-                if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
-                    role_x -= speed;
-                } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
-                    role_x -= speed;
-                }
-
-                // 调整角色步伐改变速度
+                moved = movementController.moveRight();
                 count[2]++;
                 if (count[2] > 100) {
                     count[2] = 0;
