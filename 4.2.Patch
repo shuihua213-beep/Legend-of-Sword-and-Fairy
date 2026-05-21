@@ -1,0 +1,432 @@
+diff --git a/src/cn/tedu/xjqxz/GamePanel.java b/src/cn/tedu/xjqxz/GamePanel.java
+index d3300ce..8b7ffe5 100644
+--- a/src/cn/tedu/xjqxz/GamePanel.java
++++ b/src/cn/tedu/xjqxz/GamePanel.java
+@@ -27,22 +27,16 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+     int littleChick_i = 0;
+     int mall_i = 0;
+ 
+-    // 用于调节李家村市场场景变化速度
+     int changeSpeed = 0;
+     int[] count = new int[4];
+ 
+-    // 当前背景, 1表示李家村，2表示李家村市场
+     int mapID = 1;
+ 
+-    // 聊天对象
+     int chatWith = 0;
+     Font chatFont = new Font("黑体", Font.BOLD, 25);
+ 
+-
+-    // 当前是否有对话窗口
+     boolean hasChat = false;
+ 
+-    // 背景图片绘制坐标
+     private static int ljcX = -400;
+     private static int ljcY = -190;
+     private static int mallX = -200;
+@@ -59,10 +53,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+     private static Image[] children = new Image[4];
+     private static Image[] chick = new Image[2];
+     private static Image[] littleChick = new Image[2];
++    private static MovementController.WalkableMap[] walkableMaps = new MovementController.WalkableMap[2];
+ 
+-    private static BufferedImage[] dataMap = new BufferedImage[2];
+-
+-    // 存储npc对象
+     private static Npc[] npc = new Npc[4];
+ 
+     private static String[] awsWords = {"只要功夫深，铁衣磨成粉。", "你是要帮我洗衣服吗？", "走你"};
+@@ -70,13 +62,14 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+     private static String[] wcsWords = {"Hi", "I'm washing clothes."};
+     private static String[] childrenWords = {"Are you ok ?", "Let's play !"};
+ 
+-    /**
+-     * 加载素材图片
+-     */
++    private final MovementController movementController = new MovementController();
++
+     static {
+         try {
+-            dataMap[0] = ImageIO.read(new File("img/LiJiaCun/RedMap.png"));
+-            dataMap[1] = ImageIO.read(new File("img/LiJiaCunShiChang/RedMap.png"));
++            BufferedImage villageRedMap = ImageIO.read(new File("img/LiJiaCun/RedMap.png"));
++            BufferedImage marketRedMap = ImageIO.read(new File("img/LiJiaCunShiChang/RedMap.png"));
++            walkableMaps[0] = createWalkableMap(villageRedMap, -521461);
++            walkableMaps[1] = createWalkableMap(marketRedMap, -65536);
+ 
+             ljc = ImageIO.read(new File("img/LiJiaCun/0.png"));
+ 
+@@ -84,7 +77,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                 ljcMall[i] = ImageIO.read(new File("img/LiJiaCunShiChang/" + i + ".png"));
+             }
+ 
+-            // 读取李逍遥图片
+             for (int i = 0; i < 4; i++) {
+                 String pathname = "";
+                 switch (i) {
+@@ -152,14 +144,36 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+         }
+     }
+ 
++    private static MovementController.WalkableMap createWalkableMap(BufferedImage image, int blockedColor) {
++        final boolean[][] walkableMap = new boolean[image.getHeight()][image.getWidth()];
++        for (int y = 0; y < image.getHeight(); y++) {
++            for (int x = 0; x < image.getWidth(); x++) {
++                walkableMap[y][x] = image.getRGB(x, y) != blockedColor;
++            }
++        }
++        return new MovementController.WalkableMap() {
++            @Override
++            public int getWidth() {
++                return walkableMap[0].length;
++            }
++
++            @Override
++            public int getHeight() {
++                return walkableMap.length;
++            }
++
++            @Override
++            public boolean isWalkable(int x, int y) {
++                return walkableMap[y][x];
++            }
++        };
++    }
++
+     public GamePanel() {
+         t = new Thread(this);
+         t.start();
+     }
+ 
+-    /**
+-     * 改变配角图片
+-     */
+     public void updateIndex() {
+         hen_i++;
+         if (hen_i > 5) {
+@@ -181,11 +195,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+         }
+     }
+ 
+-    /**
+-     * 改变主角图片
+-     */
+     public void updateRoleIndex() {
+-        // 步伐速度
+         final int speed = 1;
+ 
+         role_i += speed;
+@@ -198,13 +208,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+     public void paint(Graphics g) {
+         super.paint(g);
+ 
+-        // 场景在李家村
+         if (mapID == 1) {
+-            // 背景绘制
+             ljcX = (1024 - role[0][0].getWidth(null)) / 2 - role_x;
+             ljcY = (768 - role[0][0].getHeight(null)) / 2 - role_y;
+ 
+-            //判断李家村图片的边界问题
+             if (ljcY > 0) {
+                 ljcY = 0;
+             } else if (ljcY < 768 - ljc.getHeight(null)) {
+@@ -216,20 +223,15 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                 ljcX = 1024 - ljc.getWidth(null);
+             }
+ 
+-            // 背景绘制
+             g.drawImage(ljc, ljcX, ljcY, this);
+-
+-            // 配角绘制
+             g.drawImage(hen[hen_i], ljcX + 580, ljcY + 600, this);
+             g.drawImage(chick[chick_i], ljcX + 550, ljcY + 620, this);
+             g.drawImage(littleChick[littleChick_i], ljcX + 573, ljcY + 610, this);
+ 
+-            // npc绘制
+             for (Npc aNpc : npc) {
+                 g.drawImage(aNpc.getImage(), aNpc.getX() + ljcX, aNpc.getY() + ljcY, this);
+             }
+ 
+-            // 对话框绘制
+             if (hasChat && !npc[chatWith].isChatOver()) {
+                 final int titleX = 200;
+                 final int titleY = 629;
+@@ -244,16 +246,11 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                 g.drawString(npc[chatWith].getWords(), contentX, contentY);
+             }
+ 
+-            // 主角绘制
+             g.drawImage(role[role_dir][role_i], role_x + ljcX, role_y + ljcY, this);
+-
+         } else if (mapID == 2) {
+-            // 场景在李家村市场
+-
+             mallX = (1024 - role[0][0].getWidth(null)) / 2 - role_x;
+             mallY = (768 - role[0][0].getHeight(null)) / 2 - role_y;
+ 
+-            //判断李家村市场图片的边界问题
+             if (mallY > 0) {
+                 mallY = 0;
+             } else if (mallY < 768 - ljcMall[0].getHeight(null)) {
+@@ -265,20 +262,11 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                 mallX = 1024 - ljcMall[0].getWidth(null);
+             }
+ 
+-            // 背景绘制
+             g.drawImage(ljcMall[mall_i], mallX, mallY, this);
+-
+-            // 主角绘制
+             g.drawImage(role[role_dir][role_i], role_x + mallX, role_y + mallY, this);
+         }
+     }
+ 
+-    /**
+-     * 检测主角是否靠近npc发起对话
+-     * 碰撞检测
+-     * 判断主角的四个顶点是否在某个npc的矩形之中
+-     * 将配角图片矩形稍微扩大d
+-     */
+     public boolean checkChat() {
+         boolean ret = false;
+         for (int i = 0; i < npc.length; ++i) {
+@@ -333,23 +321,16 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+ 
+     }
+ 
+-    /**
+-     * 松开空格键弹出对话框，防止一直按住空格对话框闪烁
+-     * 松开回车键切换场景，防止一直按住
+-     */
+     @Override
+     public void keyReleased(KeyEvent e) {
+         if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+-//            System.out.println(role_x + "," + role_y);
+             if (!hasChat && checkChat()) {
+                 hasChat = true;
+                 npc[chatWith].setChatOver(false);
+             } else if (hasChat && npc[chatWith].isChatOver()) {
+-                // 若聊天已经结束，则关闭聊天窗口
+                 hasChat = false;
+                 npc[chatWith].chatIndex = 0;
+             } else if (hasChat && !npc[chatWith].isChatOver()) {
+-                // 如果聊天未结束，则更新聊天内容
+                 npc[chatWith].updateChatContent();
+                 if (npc[chatWith].chatIndex == 0) {
+                     hasChat = false;
+@@ -357,7 +338,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+             }
+             repaint();
+         } else if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+-            // 按下回车键判断是否切换场景
+             if (mapID == 1 && role_x >= 1780 && role_x <= 1855 && role_y >= 530 && role_y <= 615) {
+                 mapID = 2;
+                 role_x = 0;
+@@ -373,122 +353,104 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+ 
+     @Override
+     public void keyPressed(KeyEvent e) {
+-        // 主角移动速度
+-        final int speed = 4;
+-
+-        switch (e.getKeyCode()) {
+-            case KeyEvent.VK_UP:
+-                role_dir = 3;
+-                hasChat = false;
+-                role_y -= speed;
+-                int x = role_x + role[0][0].getWidth(null) / 2;
+-                int y = role_y + role[0][0].getHeight(null);
+-                if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
+-                    role_y += speed;
+-                } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
+-                    role_y += speed;
+-                }
+-
+-                // 调整角色步伐改变速度
+-                count[3]++;
+-                if (count[3] > 100) {
+-                    count[3] = 0;
+-                }
+-                if (count[3] % 2 == 0) {
+-                    updateRoleIndex();
+-                }
+-                repaint();
+-                break;
++        if (isDirectionKey(e.getKeyCode())) {
++            handleMovement(e.getKeyCode());
++            return;
++        }
+ 
+-            case KeyEvent.VK_DOWN:
+-                role_dir = 0;
++        if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
++            if (hasChat) {
+                 hasChat = false;
+-                role_y += speed;
+-                x = role_x + role[0][0].getWidth(null) / 2;
+-                y = role_y + role[0][0].getHeight(null);
+-
+-                if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
+-                    role_y -= speed;
+-                } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
+-                    role_y -= speed;
++            } else {
++                int ch = JOptionPane.showConfirmDialog(null, "确认退出游戏吗？", "提示",
++                        JOptionPane.YES_NO_OPTION);
++                if (ch == JOptionPane.YES_OPTION) {
++                    System.exit(0);
+                 }
++            }
++            repaint();
++        }
++    }
+ 
+-                // 调整角色步伐改变速度
+-                count[0]++;
+-                if (count[0] > 100) {
+-                    count[0] = 0;
+-                }
+-                if (count[0] % 2 == 0) {
+-                    updateRoleIndex();
+-                }
+-                repaint();
+-                break;
++    private boolean isDirectionKey(int keyCode) {
++        return keyCode == KeyEvent.VK_UP
++                || keyCode == KeyEvent.VK_DOWN
++                || keyCode == KeyEvent.VK_LEFT
++                || keyCode == KeyEvent.VK_RIGHT;
++    }
+ 
+-            case KeyEvent.VK_LEFT:
+-                role_dir = 1;
+-                hasChat = false;
++    private void handleMovement(int keyCode) {
++        hasChat = false;
++        MovementController.MovementState state = new MovementController.MovementState(
++                role_x,
++                role_y,
++                role_dir,
++                role[0][0].getWidth(null),
++                role[0][0].getHeight(null)
++        );
++        movementController.move(state, createKeyboardInput(keyCode), getCurrentWalkableMap());
++        role_x = state.getRoleX();
++        role_y = state.getRoleY();
++        role_dir = state.getRoleDir();
++        updateRoleFrame(keyCode);
++        repaint();
++    }
+ 
+-                if (role_x > -16) {
+-                    role_x -= speed;
+-                    x = role_x + role[0][0].getWidth(null) / 2;
+-                    y = role_y + role[0][0].getHeight(null);
+-
+-                    if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
+-                        role_x += speed;
+-                    } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
+-                        role_x += speed;
+-                    }
+-
+-                    // 调整角色步伐改变速度
+-                    count[1]++;
+-                    if (count[1] > 100) {
+-                        count[1] = 0;
+-                    }
+-                    if (count[1] % 2 == 0) {
+-                        updateRoleIndex();
+-                    }
+-                }
+-                repaint();
+-                break;
++    private MovementController.KeyboardInput createKeyboardInput(final int keyCode) {
++        return new MovementController.KeyboardInput() {
++            @Override
++            public boolean isUpPressed() {
++                return keyCode == KeyEvent.VK_UP;
++            }
+ 
+-            case KeyEvent.VK_RIGHT:
+-                role_dir = 2;
+-                hasChat = false;
++            @Override
++            public boolean isDownPressed() {
++                return keyCode == KeyEvent.VK_DOWN;
++            }
+ 
+-                role_x += speed;
+-                x = role_x + role[0][0].getWidth(null) / 2;
+-                y = role_y + role[0][0].getHeight(null);
++            @Override
++            public boolean isLeftPressed() {
++                return keyCode == KeyEvent.VK_LEFT;
++            }
+ 
+-                if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
+-                    role_x -= speed;
+-                } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
+-                    role_x -= speed;
+-                }
++            @Override
++            public boolean isRightPressed() {
++                return keyCode == KeyEvent.VK_RIGHT;
++            }
++        };
++    }
+ 
+-                // 调整角色步伐改变速度
+-                count[2]++;
+-                if (count[2] > 100) {
+-                    count[2] = 0;
+-                }
+-                if (count[2] % 2 == 0) {
+-                    updateRoleIndex();
+-                }
++    private MovementController.WalkableMap getCurrentWalkableMap() {
++        return walkableMaps[mapID - 1];
++    }
+ 
+-                repaint();
++    private void updateRoleFrame(int keyCode) {
++        int index = -1;
++        switch (keyCode) {
++            case KeyEvent.VK_DOWN:
++                index = 0;
+                 break;
+-
+-            case KeyEvent.VK_ESCAPE:
+-                if (hasChat) {
+-                    hasChat = false;
+-                } else {
+-                    int ch = JOptionPane.showConfirmDialog(null, "确认退出游戏吗？", "提示",
+-                            JOptionPane.YES_NO_OPTION);
+-                    if (ch == JOptionPane.YES_OPTION) {
+-                        System.exit(0);
+-                    }
+-                }
+-                repaint();
++            case KeyEvent.VK_LEFT:
++                index = 1;
++                break;
++            case KeyEvent.VK_RIGHT:
++                index = 2;
++                break;
++            case KeyEvent.VK_UP:
++                index = 3;
+                 break;
+         }
++
++        if (index == -1) {
++            return;
++        }
++
++        count[index]++;
++        if (count[index] > 100) {
++            count[index] = 0;
++        }
++        if (count[index] % 2 == 0) {
++            updateRoleIndex();
++        }
+     }
+ }
