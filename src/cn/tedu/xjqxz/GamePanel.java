@@ -48,17 +48,17 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     private static int mallX = -200;
     private static int mallY = -200;
 
-    private static Image ljc;
-    private static Image[] ljcMall = new Image[3];
-    private static Image chat;
-    private static Image[][] role = new Image[4][8];
-    private static Image[] aws = new Image[17];
-    private static Image[] azu = new Image[6];
-    private static Image[] hen = new Image[6];
-    private static Image[] wcs = new Image[14];
-    private static Image[] children = new Image[4];
-    private static Image[] chick = new Image[2];
-    private static Image[] littleChick = new Image[2];
+    private static String ljc;
+    private static String[] ljcMall = new String[3];
+    private static String chat;
+    private static String[][] role = new String[4][8];
+    private static String[] aws = new String[17];
+    private static String[] azu = new String[6];
+    private static String[] hen = new String[6];
+    private static String[] wcs = new String[14];
+    private static String[] children = new String[4];
+    private static String[] chick = new String[2];
+    private static String[] littleChick = new String[2];
 
     private static BufferedImage[] dataMap = new BufferedImage[2];
 
@@ -78,10 +78,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             dataMap[0] = ImageIO.read(new File("img/LiJiaCun/RedMap.png"));
             dataMap[1] = ImageIO.read(new File("img/LiJiaCunShiChang/RedMap.png"));
 
-            ljc = ImageIO.read(new File("img/LiJiaCun/0.png"));
+            ljc = "img/LiJiaCun/0.png";
 
             for (int i = 0; i < 3; i++) {
-                ljcMall[i] = ImageIO.read(new File("img/LiJiaCunShiChang/" + i + ".png"));
+                ljcMall[i] = "img/LiJiaCunShiChang/" + i + ".png";
             }
 
             // 读取李逍遥图片
@@ -102,46 +102,39 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                         break;
                 }
                 for (int j = 0; j < 8; j++) {
-                    role[i][j] = ImageIO.read(new File(pathname + j + ".png"));
+                    role[i][j] = pathname + j + ".png";
                 }
             }
 
             for (int i = 0; i < 17; i++) {
-                String pathname = "img/AWangShen/" + i + ".png";
-                aws[i] = ImageIO.read(new File(pathname));
+                aws[i] = "img/AWangShen/" + i + ".png";
             }
 
             for (int i = 0; i < 6; i++) {
-                String pathname = "img/AZhu/" + i + ".png";
-                azu[i] = ImageIO.read(new File(pathname));
+                azu[i] = "img/AZhu/" + i + ".png";
             }
 
             for (int i = 0; i < 6; i++) {
-                String pathname = "img/MuJi/" + i + ".png";
-                hen[i] = ImageIO.read(new File(pathname));
+                hen[i] = "img/MuJi/" + i + ".png";
             }
 
             for (int i = 0; i < 14; i++) {
-                String pathname = "img/WangCaiSao/" + i + ".png";
-                wcs[i] = ImageIO.read(new File(pathname));
+                wcs[i] = "img/WangCaiSao/" + i + ".png";
             }
 
             for (int i = 0; i < 4; i++) {
-                String pathname = "img/XiaoHai/" + i + ".png";
-                children[i] = ImageIO.read(new File(pathname));
+                children[i] = "img/XiaoHai/" + i + ".png";
             }
 
             for (int i = 0; i < 2; i++) {
-                String pathname = "img/XiaoJi/" + i + ".png";
-                chick[i] = ImageIO.read(new File(pathname));
+                chick[i] = "img/XiaoJi/" + i + ".png";
             }
 
             for (int i = 0; i < 2; i++) {
-                String pathname = "img/XiaoXiaoJi/" + i + ".png";
-                littleChick[i] = ImageIO.read(new File(pathname));
+                littleChick[i] = "img/XiaoXiaoJi/" + i + ".png";
             }
 
-            chat = ImageIO.read(new File("img/LiaoTian/0.png"));
+            chat = "img/LiaoTian/0.png";
 
             npc[0] = new Npc(awsWords, aws, 750, 480, "阿旺婶");
             npc[1] = new Npc(azuWords, azu, 560, 510, "阿朱");
@@ -201,28 +194,28 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         // 场景在李家村
         if (mapID == 1) {
             // 背景绘制
-            ljcX = (1024 - role[0][0].getWidth(null)) / 2 - role_x;
-            ljcY = (768 - role[0][0].getHeight(null)) / 2 - role_y;
+            ljcX = (1024 - ImageCache.getImage(role[0][0]).getWidth(null)) / 2 - role_x;
+            ljcY = (768 - ImageCache.getImage(role[0][0]).getHeight(null)) / 2 - role_y;
 
             //判断李家村图片的边界问题
             if (ljcY > 0) {
                 ljcY = 0;
-            } else if (ljcY < 768 - ljc.getHeight(null)) {
-                ljcY = 768 - ljc.getHeight(null);
+            } else if (ljcY < 768 - ImageCache.getImage(ljc).getHeight(null)) {
+                ljcY = 768 - ImageCache.getImage(ljc).getHeight(null);
             }
             if (ljcX > 0) {
                 ljcX = 0;
-            } else if (ljcX < 1024 - ljc.getWidth(null)) {
-                ljcX = 1024 - ljc.getWidth(null);
+            } else if (ljcX < 1024 - ImageCache.getImage(ljc).getWidth(null)) {
+                ljcX = 1024 - ImageCache.getImage(ljc).getWidth(null);
             }
 
             // 背景绘制
-            g.drawImage(ljc, ljcX, ljcY, this);
+            g.drawImage(ImageCache.getImage(ljc), ljcX, ljcY, this);
 
             // 配角绘制
-            g.drawImage(hen[hen_i], ljcX + 580, ljcY + 600, this);
-            g.drawImage(chick[chick_i], ljcX + 550, ljcY + 620, this);
-            g.drawImage(littleChick[littleChick_i], ljcX + 573, ljcY + 610, this);
+            g.drawImage(ImageCache.getImage(hen[hen_i]), ljcX + 580, ljcY + 600, this);
+            g.drawImage(ImageCache.getImage(chick[chick_i]), ljcX + 550, ljcY + 620, this);
+            g.drawImage(ImageCache.getImage(littleChick[littleChick_i]), ljcX + 573, ljcY + 610, this);
 
             // npc绘制
             for (Npc aNpc : npc) {
@@ -236,7 +229,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 final int contentX = 360;
                 final int contentY = 670;
 
-                g.drawImage(chat, 192, 590, this);
+                g.drawImage(ImageCache.getImage(chat), 192, 590, this);
                 g.setFont(chatFont);
                 g.setColor(Color.white);
 
@@ -245,31 +238,31 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             }
 
             // 主角绘制
-            g.drawImage(role[role_dir][role_i], role_x + ljcX, role_y + ljcY, this);
+            g.drawImage(ImageCache.getImage(role[role_dir][role_i]), role_x + ljcX, role_y + ljcY, this);
 
         } else if (mapID == 2) {
             // 场景在李家村市场
 
-            mallX = (1024 - role[0][0].getWidth(null)) / 2 - role_x;
-            mallY = (768 - role[0][0].getHeight(null)) / 2 - role_y;
+            mallX = (1024 - ImageCache.getImage(role[0][0]).getWidth(null)) / 2 - role_x;
+            mallY = (768 - ImageCache.getImage(role[0][0]).getHeight(null)) / 2 - role_y;
 
             //判断李家村市场图片的边界问题
             if (mallY > 0) {
                 mallY = 0;
-            } else if (mallY < 768 - ljcMall[0].getHeight(null)) {
-                mallY = 768 - ljcMall[0].getHeight(null);
+            } else if (mallY < 768 - ImageCache.getImage(ljcMall[0]).getHeight(null)) {
+                mallY = 768 - ImageCache.getImage(ljcMall[0]).getHeight(null);
             }
             if (mallX > 0) {
                 mallX = 0;
-            } else if (mallX < 1024 - ljcMall[0].getWidth(null)) {
-                mallX = 1024 - ljcMall[0].getWidth(null);
+            } else if (mallX < 1024 - ImageCache.getImage(ljcMall[0]).getWidth(null)) {
+                mallX = 1024 - ImageCache.getImage(ljcMall[0]).getWidth(null);
             }
 
             // 背景绘制
-            g.drawImage(ljcMall[mall_i], mallX, mallY, this);
+            g.drawImage(ImageCache.getImage(ljcMall[mall_i]), mallX, mallY, this);
 
             // 主角绘制
-            g.drawImage(role[role_dir][role_i], role_x + mallX, role_y + mallY, this);
+            g.drawImage(ImageCache.getImage(role[role_dir][role_i]), role_x + mallX, role_y + mallY, this);
         }
     }
 
@@ -299,6 +292,22 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             }
         }
         return ret;
+    }
+
+    private void flushScene1() {
+        ImageCache.flushImage(ljc);
+        for (String path : hen) ImageCache.flushImage(path);
+        for (String path : chick) ImageCache.flushImage(path);
+        for (String path : littleChick) ImageCache.flushImage(path);
+        for (String path : aws) ImageCache.flushImage(path);
+        for (String path : azu) ImageCache.flushImage(path);
+        for (String path : wcs) ImageCache.flushImage(path);
+        for (String path : children) ImageCache.flushImage(path);
+        ImageCache.flushImage(chat);
+    }
+
+    private void flushScene2() {
+        for (String path : ljcMall) ImageCache.flushImage(path);
     }
 
     @Override
@@ -362,10 +371,12 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 mapID = 2;
                 role_x = 0;
                 role_y = 600;
+                flushScene1();
             } else if (mapID == 2 && role_x == -16 && role_y >= 552 && role_y <= 704) {
                 mapID = 1;
                 role_x = 1795;
                 role_y = 570;
+                flushScene2();
             }
             repaint();
         }
@@ -381,8 +392,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 role_dir = 3;
                 hasChat = false;
                 role_y -= speed;
-                int x = role_x + role[0][0].getWidth(null) / 2;
-                int y = role_y + role[0][0].getHeight(null);
+                int x = role_x + ImageCache.getImage(role[0][0]).getWidth(null) / 2;
+                int y = role_y + ImageCache.getImage(role[0][0]).getHeight(null);
                 if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
                     role_y += speed;
                 } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
@@ -404,8 +415,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 role_dir = 0;
                 hasChat = false;
                 role_y += speed;
-                x = role_x + role[0][0].getWidth(null) / 2;
-                y = role_y + role[0][0].getHeight(null);
+                x = role_x + ImageCache.getImage(role[0][0]).getWidth(null) / 2;
+                y = role_y + ImageCache.getImage(role[0][0]).getHeight(null);
 
                 if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
                     role_y -= speed;
@@ -430,8 +441,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
                 if (role_x > -16) {
                     role_x -= speed;
-                    x = role_x + role[0][0].getWidth(null) / 2;
-                    y = role_y + role[0][0].getHeight(null);
+                    x = role_x + ImageCache.getImage(role[0][0]).getWidth(null) / 2;
+                    y = role_y + ImageCache.getImage(role[0][0]).getHeight(null);
 
                     if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
                         role_x += speed;
@@ -456,8 +467,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 hasChat = false;
 
                 role_x += speed;
-                x = role_x + role[0][0].getWidth(null) / 2;
-                y = role_y + role[0][0].getHeight(null);
+                x = role_x + ImageCache.getImage(role[0][0]).getWidth(null) / 2;
+                y = role_y + ImageCache.getImage(role[0][0]).getHeight(null);
 
                 if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
                     role_x -= speed;

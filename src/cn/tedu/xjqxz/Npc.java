@@ -17,12 +17,12 @@ public class Npc {
 
     private int index = 0;
     int chatIndex = 0;
-    private Image[] image;
+    private String[] imagePaths;
     private String[] words;
 
-    public Npc(String[] words, Image[] image, int x, int y, String name) {
+    public Npc(String[] words, String[] imagePaths, int x, int y, String name) {
         this.words = words;
-        this.image = image;
+        this.imagePaths = imagePaths;
         this.x = x;
         this.y = y;
         this.name = name;
@@ -41,20 +41,22 @@ public class Npc {
     }
 
     public int getWidth() {
-        return image[0].getWidth(null);
+        Image img = ImageCache.getImage(imagePaths[0]);
+        return img != null ? img.getWidth(null) : 0;
     }
 
     public int getHeight() {
-        return image[0].getHeight(null);
+        Image img = ImageCache.getImage(imagePaths[0]);
+        return img != null ? img.getHeight(null) : 0;
     }
 
     public Image getImage() {
-        return image[index];
+        return ImageCache.getImage(imagePaths[index]);
     }
 
     public void updateIndex() {
         index++;
-        if (index > image.length - 1) {
+        if (index > imagePaths.length - 1) {
             index = 0;
         }
     }
