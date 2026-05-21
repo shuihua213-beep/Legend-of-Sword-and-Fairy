@@ -18,10 +18,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     Thread t;
     int role_dir = 0;
     int role_i = 0;
-    int role_x = 152;
-    int role_y = 704;
-    int roleW = 60;
-    int roleH = 108;
+    MovementController movementController;
     int hen_i = 0;
     int chick_i = 0;
     int littleChick_i = 0;
@@ -153,6 +150,36 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public GamePanel() {
+        movementController = new MovementController(152, 704, 60, 108, 4);
+        movementController.setMap(new WalkableMap() {
+            @Override
+            public boolean isWalkable(int x, int y) {
+                if (mapID == 1) {
+                    try {
+                        return dataMap[0].getRGB(x, y) != -521461;
+                    } catch (Exception e) {
+                        return false;
+                    }
+                } else {
+                    try {
+                        return dataMap[1].getRGB(x, y) != -65536;
+                    } catch (Exception e) {
+                        return false;
+                    }
+                }
+            }
+
+            @Override
+            public int getWidth() {
+                return dataMap[mapID - 1].getWidth();
+            }
+
+            @Override
+            public int getHeight() {
+                return dataMap[mapID - 1].getHeight();
+            }
+        });
+
         t = new Thread(this);
         t.start();
     }
@@ -201,8 +228,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         // 场景在李家村
         if (mapID == 1) {
             // 背景绘制
-            ljcX = (1024 - role[0][0].getWidth(null)) / 2 - role_x;
-            ljcY = (768 - role[0][0].getHeight(null)) / 2 - role_y;
+            ljcX = (1024 - role[0][0].getWidth(null)) / 2 - movementController.getRoleX();
+            ljcY = (768 - role[0][0].getHeight(null)) / 2 - movementController.getRoleY();
 
             //判断李家村图片的边界问题
             if (ljcY > 0) {
@@ -245,13 +272,13 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             }
 
             // 主角绘制
-            g.drawImage(role[role_dir][role_i], role_x + ljcX, role_y + ljcY, this);
+            g.drawImage(role[role_dir][role_i], movementController.getRoleX() + ljcX, movementController.getRoleY() + ljcY, this);
 
         } else if (mapID == 2) {
             // 场景在李家村市场
 
-            mallX = (1024 - role[0][0].getWidth(null)) / 2 - role_x;
-            mallY = (768 - role[0][0].getHeight(null)) / 2 - role_y;
+            mallX = (1024 - role[0][0].getWidth(null)) / 2 - movementController.getRoleX();
+            mallY = (768 - role[0][0].getHeight(null)) / 2 - movementController.getRoleY();
 
             //判断李家村市场图片的边界问题
             if (mallY > 0) {
@@ -269,7 +296,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             g.drawImage(ljcMall[mall_i], mallX, mallY, this);
 
             // 主角绘制
-            g.drawImage(role[role_dir][role_i], role_x + mallX, role_y + mallY, this);
+            g.drawImage(role[role_dir][role_i], movementController.getRoleX() + mallX, movementController.getRoleY() + mallY, this);
         }
     }
 
@@ -281,6 +308,11 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
      */
     public boolean checkChat() {
         boolean ret = false;
+        int role_x = movementController.getRoleX();
+        int role_y = movementController.getRoleY();
+        int roleW = movementController.getRoleWidth();
+        int roleH = movementController.getRoleHeight();
+        
         for (int i = 0; i < npc.length; ++i) {
             Npc n = npc[i];
             int d = 15;
@@ -340,7 +372,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     @Override
     public void keyReleased(KeyEvent e) {
         if (e.getKeyCode() == KeyEvent.VK_SPACE) {
-//            System.out.println(role_x + "," + role_y);
+//            System.out.println(movementController.getRoleX() + "," + movementController.getRoleY());
             if (!hasChat && checkChat()) {
                 hasChat = true;
                 npc[chatWith].setChatOver(false);
@@ -358,14 +390,16 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             repaint();
         } else if (e.getKeyCode() == KeyEvent.VK_ENTER) {
             // 按下回车键判断是否切换场景
+            int role_x = movementController.getRoleX();
+            int role_y = movementController.getRoleY();
             if (mapID == 1 && role_x >= 1780 && role_x <= 1855 && role_y >= 530 && role_y <= 615) {
                 mapID = 2;
-                role_x = 0;
-                role_y = 600;
+                movementController.setRoleX(0);
+                movementController.setRoleY(600);
             } else if (mapID == 2 && role_x == -16 && role_y >= 552 && role_y <= 704) {
                 mapID = 1;
-                role_x = 1795;
-                role_y = 570;
+                movementController.setRoleX(1795);
+                movementController.setRoleY(570);
             }
             repaint();
         }
@@ -373,21 +407,11 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
     @Override
     public void keyPressed(KeyEvent e) {
-        // 主角移动速度
-        final int speed = 4;
-
         switch (e.getKeyCode()) {
             case KeyEvent.VK_UP:
                 role_dir = 3;
                 hasChat = false;
-                role_y -= speed;
-                int x = role_x + role[0][0].getWidth(null) / 2;
-                int y = role_y + role[0][0].getHeight(null);
-                if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
-                    role_y += speed;
-                } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
-                    role_y += speed;
-                }
+                movementController.moveUp();
 
                 // 调整角色步伐改变速度
                 count[3]++;
@@ -403,15 +427,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             case KeyEvent.VK_DOWN:
                 role_dir = 0;
                 hasChat = false;
-                role_y += speed;
-                x = role_x + role[0][0].getWidth(null) / 2;
-                y = role_y + role[0][0].getHeight(null);
-
-                if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
-                    role_y -= speed;
-                } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
-                    role_y -= speed;
-                }
+                movementController.moveDown();
 
                 // 调整角色步伐改变速度
                 count[0]++;
@@ -427,26 +443,15 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             case KeyEvent.VK_LEFT:
                 role_dir = 1;
                 hasChat = false;
+                movementController.moveLeft();
 
-                if (role_x > -16) {
-                    role_x -= speed;
-                    x = role_x + role[0][0].getWidth(null) / 2;
-                    y = role_y + role[0][0].getHeight(null);
-
-                    if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
-                        role_x += speed;
-                    } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
-                        role_x += speed;
-                    }
-
-                    // 调整角色步伐改变速度
-                    count[1]++;
-                    if (count[1] > 100) {
-                        count[1] = 0;
-                    }
-                    if (count[1] % 2 == 0) {
-                        updateRoleIndex();
-                    }
+                // 调整角色步伐改变速度
+                count[1]++;
+                if (count[1] > 100) {
+                    count[1] = 0;
+                }
+                if (count[1] % 2 == 0) {
+                    updateRoleIndex();
                 }
                 repaint();
                 break;
@@ -454,16 +459,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             case KeyEvent.VK_RIGHT:
                 role_dir = 2;
                 hasChat = false;
-
-                role_x += speed;
-                x = role_x + role[0][0].getWidth(null) / 2;
-                y = role_y + role[0][0].getHeight(null);
-
-                if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
-                    role_x -= speed;
-                } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
-                    role_x -= speed;
-                }
+                movementController.moveRight();
 
                 // 调整角色步伐改变速度
                 count[2]++;
@@ -473,7 +469,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 if (count[2] % 2 == 0) {
                     updateRoleIndex();
                 }
-
                 repaint();
                 break;
 
