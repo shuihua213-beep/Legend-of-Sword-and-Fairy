@@ -8,6 +8,7 @@ import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 
 /**
  * 游戏项目的画板类，即界面文件
@@ -15,6 +16,13 @@ import java.io.IOException;
  * @author fgksgf
  */
 public class GamePanel extends JPanel implements Runnable, KeyListener {
+    private static final String[] dataMapPath = {
+            "img/LiJiaCun/RedMap.png",
+            "img/LiJiaCunShiChang/RedMap.png"
+    };
+    private static final String[] mapName = {"李家村", "李家村市场"};
+    private static final int[] blockedColor = {-521461, -65536};
+
     Thread t;
     int role_dir = 0;
     int role_i = 0;
@@ -61,6 +69,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     private static Image[] littleChick = new Image[2];
 
     private static BufferedImage[] dataMap = new BufferedImage[2];
+    private static WeakReference<BufferedImage>[] dataMapCache = new WeakReference[2];
 
     // 存储npc对象
     private static Npc[] npc = new Npc[4];
@@ -75,9 +84,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
      */
     static {
         try {
-            dataMap[0] = ImageIO.read(new File("img/LiJiaCun/RedMap.png"));
-            dataMap[1] = ImageIO.read(new File("img/LiJiaCunShiChang/RedMap.png"));
-
             ljc = ImageIO.read(new File("img/LiJiaCun/0.png"));
 
             for (int i = 0; i < 3; i++) {
@@ -155,6 +161,52 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     public GamePanel() {
         t = new Thread(this);
         t.start();
+    }
+
+    public boolean loadDataMap(int sceneID) {
+        int mapIndex = sceneID - 1;
+        if (mapIndex < 0 || mapIndex >= dataMap.length) {
+            JOptionPane.showMessageDialog(null, "未知场景，无法加载红点地图。", "错误", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+
+        if (dataMap[mapIndex] != null) {
+            return true;
+        }
+
+        if (dataMapCache[mapIndex] != null) {
+            BufferedImage cachedMap = dataMapCache[mapIndex].get();
+            if (cachedMap != null) {
+                dataMap[mapIndex] = cachedMap;
+                return true;
+            }
+        }
+
+        try {
+            dataMap[mapIndex] = ImageIO.read(new File(dataMapPath[mapIndex]));
+            dataMapCache[mapIndex] = new WeakReference<>(dataMap[mapIndex]);
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "加载" + mapName[mapIndex] + "红点地图失败。", "错误", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+    }
+
+    public void cacheDataMap(int sceneID) {
+        int mapIndex = sceneID - 1;
+        if (mapIndex >= 0 && mapIndex < dataMap.length && dataMap[mapIndex] != null) {
+            dataMapCache[mapIndex] = new WeakReference<>(dataMap[mapIndex]);
+            dataMap[mapIndex] = null;
+        }
+    }
+
+    public boolean checkBlocked(int x, int y) {
+        if (!loadDataMap(mapID)) {
+            return true;
+        }
+        int mapIndex = mapID - 1;
+        return dataMap[mapIndex].getRGB(x, y) == blockedColor[mapIndex];
     }
 
     /**
@@ -359,13 +411,19 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         } else if (e.getKeyCode() == KeyEvent.VK_ENTER) {
             // 按下回车键判断是否切换场景
             if (mapID == 1 && role_x >= 1780 && role_x <= 1855 && role_y >= 530 && role_y <= 615) {
-                mapID = 2;
-                role_x = 0;
-                role_y = 600;
+                if (loadDataMap(2)) {
+                    cacheDataMap(1);
+                    mapID = 2;
+                    role_x = 0;
+                    role_y = 600;
+                }
             } else if (mapID == 2 && role_x == -16 && role_y >= 552 && role_y <= 704) {
-                mapID = 1;
-                role_x = 1795;
-                role_y = 570;
+                if (loadDataMap(1)) {
+                    cacheDataMap(2);
+                    mapID = 1;
+                    role_x = 1795;
+                    role_y = 570;
+                }
             }
             repaint();
         }
@@ -383,9 +441,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 role_y -= speed;
                 int x = role_x + role[0][0].getWidth(null) / 2;
                 int y = role_y + role[0][0].getHeight(null);
-                if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
-                    role_y += speed;
-                } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
+                if (checkBlocked(x, y)) {
                     role_y += speed;
                 }
 
@@ -407,9 +463,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 x = role_x + role[0][0].getWidth(null) / 2;
                 y = role_y + role[0][0].getHeight(null);
 
-                if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
-                    role_y -= speed;
-                } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
+                if (checkBlocked(x, y)) {
                     role_y -= speed;
                 }
 
@@ -433,9 +487,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                     x = role_x + role[0][0].getWidth(null) / 2;
                     y = role_y + role[0][0].getHeight(null);
 
-                    if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
-                        role_x += speed;
-                    } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
+                    if (checkBlocked(x, y)) {
                         role_x += speed;
                     }
 
@@ -459,9 +511,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 x = role_x + role[0][0].getWidth(null) / 2;
                 y = role_y + role[0][0].getHeight(null);
 
-                if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
-                    role_x -= speed;
-                } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
+                if (checkBlocked(x, y)) {
                     role_x -= speed;
                 }
 
