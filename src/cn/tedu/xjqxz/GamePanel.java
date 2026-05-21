@@ -1,10 +1,11 @@
 package cn.tedu.xjqxz;
 
 import javax.imageio.ImageIO;
-import javax.swing.*;
+import javax.swing.JOptionPane;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -14,8 +15,11 @@ import java.io.IOException;
  *
  * @author fgksgf
  */
-public class GamePanel extends JPanel implements Runnable, KeyListener {
-    Thread t;
+public class GamePanel extends Canvas implements Runnable, KeyListener {
+    private Thread t;
+    private volatile boolean started;
+    private final Object renderLock = new Object();
+
     int role_dir = 0;
     int role_i = 0;
     int role_x = 152;
@@ -27,22 +31,16 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     int littleChick_i = 0;
     int mall_i = 0;
 
-    // 用于调节李家村市场场景变化速度
     int changeSpeed = 0;
     int[] count = new int[4];
 
-    // 当前背景, 1表示李家村，2表示李家村市场
     int mapID = 1;
 
-    // 聊天对象
     int chatWith = 0;
     Font chatFont = new Font("黑体", Font.BOLD, 25);
 
-
-    // 当前是否有对话窗口
     boolean hasChat = false;
 
-    // 背景图片绘制坐标
     private static int ljcX = -400;
     private static int ljcY = -190;
     private static int mallX = -200;
@@ -62,7 +60,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
     private static BufferedImage[] dataMap = new BufferedImage[2];
 
-    // 存储npc对象
     private static Npc[] npc = new Npc[4];
 
     private static String[] awsWords = {"只要功夫深，铁衣磨成粉。", "你是要帮我洗衣服吗？", "走你"};
@@ -84,7 +81,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 ljcMall[i] = ImageIO.read(new File("img/LiJiaCunShiChang/" + i + ".png"));
             }
 
-            // 读取李逍遥图片
             for (int i = 0; i < 4; i++) {
                 String pathname = "";
                 switch (i) {
@@ -153,8 +149,20 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public GamePanel() {
-        t = new Thread(this);
-        t.start();
+        setIgnoreRepaint(true);
+        setFocusable(true);
+        setPreferredSize(new Dimension(1024, 768));
+    }
+
+    @Override
+    public void addNotify() {
+        super.addNotify();
+        if (!started) {
+            createBufferStrategy(2);
+            started = true;
+            t = new Thread(this);
+            t.start();
+        }
     }
 
     /**
@@ -185,7 +193,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
      * 改变主角图片
      */
     public void updateRoleIndex() {
-        // 步伐速度
         final int speed = 1;
 
         role_i += speed;
@@ -194,17 +201,11 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
     }
 
-    @Override
-    public void paint(Graphics g) {
-        super.paint(g);
-
-        // 场景在李家村
+    private void drawFrame(Graphics g) {
         if (mapID == 1) {
-            // 背景绘制
             ljcX = (1024 - role[0][0].getWidth(null)) / 2 - role_x;
             ljcY = (768 - role[0][0].getHeight(null)) / 2 - role_y;
 
-            //判断李家村图片的边界问题
             if (ljcY > 0) {
                 ljcY = 0;
             } else if (ljcY < 768 - ljc.getHeight(null)) {
@@ -216,20 +217,16 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 ljcX = 1024 - ljc.getWidth(null);
             }
 
-            // 背景绘制
             g.drawImage(ljc, ljcX, ljcY, this);
 
-            // 配角绘制
             g.drawImage(hen[hen_i], ljcX + 580, ljcY + 600, this);
             g.drawImage(chick[chick_i], ljcX + 550, ljcY + 620, this);
             g.drawImage(littleChick[littleChick_i], ljcX + 573, ljcY + 610, this);
 
-            // npc绘制
             for (Npc aNpc : npc) {
                 g.drawImage(aNpc.getImage(), aNpc.getX() + ljcX, aNpc.getY() + ljcY, this);
             }
 
-            // 对话框绘制
             if (hasChat && !npc[chatWith].isChatOver()) {
                 final int titleX = 200;
                 final int titleY = 629;
@@ -244,16 +241,12 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 g.drawString(npc[chatWith].getWords(), contentX, contentY);
             }
 
-            // 主角绘制
             g.drawImage(role[role_dir][role_i], role_x + ljcX, role_y + ljcY, this);
 
         } else if (mapID == 2) {
-            // 场景在李家村市场
-
             mallX = (1024 - role[0][0].getWidth(null)) / 2 - role_x;
             mallY = (768 - role[0][0].getHeight(null)) / 2 - role_y;
 
-            //判断李家村市场图片的边界问题
             if (mallY > 0) {
                 mallY = 0;
             } else if (mallY < 768 - ljcMall[0].getHeight(null)) {
@@ -265,12 +258,42 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 mallX = 1024 - ljcMall[0].getWidth(null);
             }
 
-            // 背景绘制
             g.drawImage(ljcMall[mall_i], mallX, mallY, this);
 
-            // 主角绘制
             g.drawImage(role[role_dir][role_i], role_x + mallX, role_y + mallY, this);
         }
+    }
+
+    private void renderGame() {
+        synchronized (renderLock) {
+            BufferStrategy bs = getBufferStrategy();
+            if (bs == null) {
+                return;
+            }
+
+            do {
+                do {
+                    Graphics g = bs.getDrawGraphics();
+                    if (g == null) {
+                        return;
+                    }
+                    try {
+                        drawFrame(g);
+                    } finally {
+                        g.dispose();
+                    }
+                } while (bs.contentsRestored());
+                bs.show();
+            } while (bs.contentsLost());
+        }
+    }
+
+    @Override
+    public void paint(Graphics g) {
+    }
+
+    @Override
+    public void update(Graphics g) {
     }
 
     /**
@@ -319,11 +342,12 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 changeSpeed = 0;
             }
 
-            repaint();
+            renderGame();
             try {
                 Thread.sleep(200);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                Thread.currentThread().interrupt();
+                break;
             }
         }
     }
@@ -340,24 +364,20 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     @Override
     public void keyReleased(KeyEvent e) {
         if (e.getKeyCode() == KeyEvent.VK_SPACE) {
-//            System.out.println(role_x + "," + role_y);
             if (!hasChat && checkChat()) {
                 hasChat = true;
                 npc[chatWith].setChatOver(false);
             } else if (hasChat && npc[chatWith].isChatOver()) {
-                // 若聊天已经结束，则关闭聊天窗口
                 hasChat = false;
                 npc[chatWith].chatIndex = 0;
             } else if (hasChat && !npc[chatWith].isChatOver()) {
-                // 如果聊天未结束，则更新聊天内容
                 npc[chatWith].updateChatContent();
                 if (npc[chatWith].chatIndex == 0) {
                     hasChat = false;
                 }
             }
-            repaint();
+            renderGame();
         } else if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-            // 按下回车键判断是否切换场景
             if (mapID == 1 && role_x >= 1780 && role_x <= 1855 && role_y >= 530 && role_y <= 615) {
                 mapID = 2;
                 role_x = 0;
@@ -367,13 +387,12 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 role_x = 1795;
                 role_y = 570;
             }
-            repaint();
+            renderGame();
         }
     }
 
     @Override
     public void keyPressed(KeyEvent e) {
-        // 主角移动速度
         final int speed = 4;
 
         switch (e.getKeyCode()) {
@@ -389,7 +408,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                     role_y += speed;
                 }
 
-                // 调整角色步伐改变速度
                 count[3]++;
                 if (count[3] > 100) {
                     count[3] = 0;
@@ -397,7 +415,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 if (count[3] % 2 == 0) {
                     updateRoleIndex();
                 }
-                repaint();
+                renderGame();
                 break;
 
             case KeyEvent.VK_DOWN:
@@ -413,7 +431,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                     role_y -= speed;
                 }
 
-                // 调整角色步伐改变速度
                 count[0]++;
                 if (count[0] > 100) {
                     count[0] = 0;
@@ -421,7 +438,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 if (count[0] % 2 == 0) {
                     updateRoleIndex();
                 }
-                repaint();
+                renderGame();
                 break;
 
             case KeyEvent.VK_LEFT:
@@ -439,7 +456,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                         role_x += speed;
                     }
 
-                    // 调整角色步伐改变速度
                     count[1]++;
                     if (count[1] > 100) {
                         count[1] = 0;
@@ -448,7 +464,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                         updateRoleIndex();
                     }
                 }
-                repaint();
+                renderGame();
                 break;
 
             case KeyEvent.VK_RIGHT:
@@ -465,7 +481,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                     role_x -= speed;
                 }
 
-                // 调整角色步伐改变速度
                 count[2]++;
                 if (count[2] > 100) {
                     count[2] = 0;
@@ -474,7 +489,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                     updateRoleIndex();
                 }
 
-                repaint();
+                renderGame();
                 break;
 
             case KeyEvent.VK_ESCAPE:
@@ -487,7 +502,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                         System.exit(0);
                     }
                 }
-                repaint();
+                renderGame();
                 break;
         }
     }
