@@ -1,0 +1,191 @@
+diff --git a/src/cn/tedu/xjqxz/GamePanel.java b/src/cn/tedu/xjqxz/GamePanel.java
+index d3300ce..7c9f6e0 100644
+--- a/src/cn/tedu/xjqxz/GamePanel.java
++++ b/src/cn/tedu/xjqxz/GamePanel.java
+@@ -8,6 +8,11 @@ import java.awt.event.KeyListener;
+ import java.awt.image.BufferedImage;
+ import java.io.File;
+ import java.io.IOException;
++import java.lang.ref.WeakReference;
++import java.util.HashMap;
++import java.util.HashSet;
++import java.util.Map;
++import java.util.Set;
+ 
+ /**
+  * 游戏项目的画板类，即界面文件
+@@ -60,7 +65,26 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+     private static Image[] chick = new Image[2];
+     private static Image[] littleChick = new Image[2];
+ 
+-    private static BufferedImage[] dataMap = new BufferedImage[2];
++    private static class MapData {
++        final BufferedImage dataMap;
++        final boolean[][] walkableMap;
++        final Set<Point> destructedPoints;
++
++        MapData(BufferedImage dataMap, int obstacleRGB) {
++            this.dataMap = dataMap;
++            int w = dataMap.getWidth();
++            int h = dataMap.getHeight();
++            this.walkableMap = new boolean[h][w];
++            for (int y = 0; y < h; y++) {
++                for (int x = 0; x < w; x++) {
++                    this.walkableMap[y][x] = (dataMap.getRGB(x, y) != obstacleRGB);
++                }
++            }
++            this.destructedPoints = new HashSet<>();
++        }
++    }
++
++    private static final Map<Integer, WeakReference<MapData>> mapDataCache = new HashMap<>();
+ 
+     // 存储npc对象
+     private static Npc[] npc = new Npc[4];
+@@ -75,9 +99,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+      */
+     static {
+         try {
+-            dataMap[0] = ImageIO.read(new File("img/LiJiaCun/RedMap.png"));
+-            dataMap[1] = ImageIO.read(new File("img/LiJiaCunShiChang/RedMap.png"));
+-
+             ljc = ImageIO.read(new File("img/LiJiaCun/0.png"));
+ 
+             for (int i = 0; i < 3; i++) {
+@@ -152,6 +173,55 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+         }
+     }
+ 
++    private static MapData getMapData(int mapID) {
++        WeakReference<MapData> ref = mapDataCache.get(mapID);
++        if (ref != null) {
++            return ref.get();
++        }
++        return null;
++    }
++
++    private static boolean loadDataMap(int mapID) {
++        String path;
++        int obstacleColor;
++        if (mapID == 1) {
++            path = "img/LiJiaCun/RedMap.png";
++            obstacleColor = -521461;
++        } else if (mapID == 2) {
++            path = "img/LiJiaCunShiChang/RedMap.png";
++            obstacleColor = -65536;
++        } else {
++            return false;
++        }
++
++        try {
++            BufferedImage img = ImageIO.read(new File(path));
++            if (img == null) {
++                JOptionPane.showMessageDialog(null,
++                        "加载红点地图失败: " + path,
++                        "错误",
++                        JOptionPane.ERROR_MESSAGE);
++                return false;
++            }
++            MapData data = new MapData(img, obstacleColor);
++            mapDataCache.put(mapID, new WeakReference<>(data));
++            return true;
++        } catch (IOException e) {
++            JOptionPane.showMessageDialog(null,
++                    "加载红点地图失败: " + path + "\n" + e.getMessage(),
++                    "错误",
++                    JOptionPane.ERROR_MESSAGE);
++            return false;
++        }
++    }
++
++    private static boolean ensureMapLoaded(int mapID) {
++        if (getMapData(mapID) != null) {
++            return true;
++        }
++        return loadDataMap(mapID);
++    }
++
+     public GamePanel() {
+         t = new Thread(this);
+         t.start();
+@@ -362,10 +432,12 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                 mapID = 2;
+                 role_x = 0;
+                 role_y = 600;
++                loadDataMap(mapID);
+             } else if (mapID == 2 && role_x == -16 && role_y >= 552 && role_y <= 704) {
+                 mapID = 1;
+                 role_x = 1795;
+                 role_y = 570;
++                loadDataMap(mapID);
+             }
+             repaint();
+         }
+@@ -373,7 +445,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+ 
+     @Override
+     public void keyPressed(KeyEvent e) {
+-        // 主角移动速度
+         final int speed = 4;
+ 
+         switch (e.getKeyCode()) {
+@@ -383,13 +454,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                 role_y -= speed;
+                 int x = role_x + role[0][0].getWidth(null) / 2;
+                 int y = role_y + role[0][0].getHeight(null);
+-                if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
+-                    role_y += speed;
+-                } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
++                if (!ensureMapLoaded(mapID) || !getMapData(mapID).walkableMap[y][x]) {
+                     role_y += speed;
+                 }
+ 
+-                // 调整角色步伐改变速度
+                 count[3]++;
+                 if (count[3] > 100) {
+                     count[3] = 0;
+@@ -407,13 +475,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                 x = role_x + role[0][0].getWidth(null) / 2;
+                 y = role_y + role[0][0].getHeight(null);
+ 
+-                if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
+-                    role_y -= speed;
+-                } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
++                if (!ensureMapLoaded(mapID) || !getMapData(mapID).walkableMap[y][x]) {
+                     role_y -= speed;
+                 }
+ 
+-                // 调整角色步伐改变速度
+                 count[0]++;
+                 if (count[0] > 100) {
+                     count[0] = 0;
+@@ -433,13 +498,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                     x = role_x + role[0][0].getWidth(null) / 2;
+                     y = role_y + role[0][0].getHeight(null);
+ 
+-                    if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
+-                        role_x += speed;
+-                    } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
++                    if (!ensureMapLoaded(mapID) || !getMapData(mapID).walkableMap[y][x]) {
+                         role_x += speed;
+                     }
+ 
+-                    // 调整角色步伐改变速度
+                     count[1]++;
+                     if (count[1] > 100) {
+                         count[1] = 0;
+@@ -459,13 +521,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                 x = role_x + role[0][0].getWidth(null) / 2;
+                 y = role_y + role[0][0].getHeight(null);
+ 
+-                if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
+-                    role_x -= speed;
+-                } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
++                if (!ensureMapLoaded(mapID) || !getMapData(mapID).walkableMap[y][x]) {
+                     role_x -= speed;
+                 }
+ 
+-                // 调整角色步伐改变速度
+                 count[2]++;
+                 if (count[2] > 100) {
+                     count[2] = 0;
