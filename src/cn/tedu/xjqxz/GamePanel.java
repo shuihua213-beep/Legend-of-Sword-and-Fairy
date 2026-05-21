@@ -8,6 +8,7 @@ import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 
 /**
  * 游戏项目的画板类，即界面文件
@@ -60,7 +61,9 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     private static Image[] chick = new Image[2];
     private static Image[] littleChick = new Image[2];
 
-    private static BufferedImage[] dataMap = new BufferedImage[2];
+    private static WeakReference<BufferedImage>[] dataMapCache = new WeakReference[2];
+    private static BufferedImage currentDataMap = null;
+    private static int currentLoadedMapId = -1;
 
     // 存储npc对象
     private static Npc[] npc = new Npc[4];
@@ -75,9 +78,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
      */
     static {
         try {
-            dataMap[0] = ImageIO.read(new File("img/LiJiaCun/RedMap.png"));
-            dataMap[1] = ImageIO.read(new File("img/LiJiaCunShiChang/RedMap.png"));
-
             ljc = ImageIO.read(new File("img/LiJiaCun/0.png"));
 
             for (int i = 0; i < 3; i++) {
@@ -149,6 +149,51 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             npc[3] = new Npc(childrenWords, children, 1160, 770, "熊孩子");
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private static boolean loadDataMap(int mapId) {
+        if (mapId < 1 || mapId > 2) {
+            JOptionPane.showMessageDialog(null, "无效的地图ID: " + mapId, "错误", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+
+        int index = mapId - 1;
+
+        if (currentLoadedMapId == mapId && currentDataMap != null) {
+            return true;
+        }
+
+        if (currentLoadedMapId != -1 && currentDataMap != null) {
+            dataMapCache[currentLoadedMapId - 1] = new WeakReference<>(currentDataMap);
+        }
+
+        WeakReference<BufferedImage> cachedRef = dataMapCache[index];
+        if (cachedRef != null) {
+            BufferedImage cached = cachedRef.get();
+            if (cached != null) {
+                currentDataMap = cached;
+                currentLoadedMapId = mapId;
+                dataMapCache[index] = null;
+                return true;
+            }
+        }
+
+        try {
+            String path;
+            if (mapId == 1) {
+                path = "img/LiJiaCun/RedMap.png";
+            } else {
+                path = "img/LiJiaCunShiChang/RedMap.png";
+            }
+
+            currentDataMap = ImageIO.read(new File(path));
+            currentLoadedMapId = mapId;
+            return true;
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(null, "加载地图失败: " + mapId + "\n" + e.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+            return false;
         }
     }
 
@@ -373,8 +418,13 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
     @Override
     public void keyPressed(KeyEvent e) {
-        // 主角移动速度
         final int speed = 4;
+
+        if (currentLoadedMapId != mapID || currentDataMap == null) {
+            if (!loadDataMap(mapID)) {
+                return;
+            }
+        }
 
         switch (e.getKeyCode()) {
             case KeyEvent.VK_UP:
@@ -383,13 +433,12 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 role_y -= speed;
                 int x = role_x + role[0][0].getWidth(null) / 2;
                 int y = role_y + role[0][0].getHeight(null);
-                if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
+                if (mapID == 1 && currentDataMap.getRGB(x, y) == -521461) {
                     role_y += speed;
-                } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
+                } else if (mapID == 2 && currentDataMap.getRGB(x, y) == -65536) {
                     role_y += speed;
                 }
 
-                // 调整角色步伐改变速度
                 count[3]++;
                 if (count[3] > 100) {
                     count[3] = 0;
@@ -407,13 +456,12 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 x = role_x + role[0][0].getWidth(null) / 2;
                 y = role_y + role[0][0].getHeight(null);
 
-                if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
+                if (mapID == 1 && currentDataMap.getRGB(x, y) == -521461) {
                     role_y -= speed;
-                } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
+                } else if (mapID == 2 && currentDataMap.getRGB(x, y) == -65536) {
                     role_y -= speed;
                 }
 
-                // 调整角色步伐改变速度
                 count[0]++;
                 if (count[0] > 100) {
                     count[0] = 0;
@@ -433,13 +481,12 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                     x = role_x + role[0][0].getWidth(null) / 2;
                     y = role_y + role[0][0].getHeight(null);
 
-                    if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
+                    if (mapID == 1 && currentDataMap.getRGB(x, y) == -521461) {
                         role_x += speed;
-                    } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
+                    } else if (mapID == 2 && currentDataMap.getRGB(x, y) == -65536) {
                         role_x += speed;
                     }
 
-                    // 调整角色步伐改变速度
                     count[1]++;
                     if (count[1] > 100) {
                         count[1] = 0;
@@ -459,13 +506,12 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 x = role_x + role[0][0].getWidth(null) / 2;
                 y = role_y + role[0][0].getHeight(null);
 
-                if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
+                if (mapID == 1 && currentDataMap.getRGB(x, y) == -521461) {
                     role_x -= speed;
-                } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
+                } else if (mapID == 2 && currentDataMap.getRGB(x, y) == -65536) {
                     role_x -= speed;
                 }
 
-                // 调整角色步伐改变速度
                 count[2]++;
                 if (count[2] > 100) {
                     count[2] = 0;
