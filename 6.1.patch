@@ -1,0 +1,81 @@
+diff --git a/src/cn/tedu/xjqxz/GamePanel.java b/src/cn/tedu/xjqxz/GamePanel.java
+index d3300ce..9ad3587 100644
+--- a/src/cn/tedu/xjqxz/GamePanel.java
++++ b/src/cn/tedu/xjqxz/GamePanel.java
+@@ -194,6 +194,54 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+         }
+     }
+ 
++    private java.util.List<String> wrapText(String text, int maxWidth, FontMetrics fm) {
++        java.util.List<String> lines = new java.util.ArrayList<>();
++        if (text == null || text.isEmpty()) {
++            return lines;
++        }
++        StringBuilder currentLine = new StringBuilder();
++        int currentWidth = 0;
++        int i = 0;
++        while (i < text.length()) {
++            char c = text.charAt(i);
++            int charWidth = fm.charWidth(c);
++            if (currentWidth + charWidth <= maxWidth) {
++                currentLine.append(c);
++                currentWidth += charWidth;
++                i++;
++            } else {
++                if (currentLine.length() == 0) {
++                    currentLine.append(c);
++                    i++;
++                }
++                int lastSpace = currentLine.lastIndexOf(" ");
++                if (lastSpace != -1) {
++                    lines.add(currentLine.substring(0, lastSpace));
++                    currentLine = new StringBuilder(currentLine.substring(lastSpace + 1));
++                    currentWidth = fm.stringWidth(currentLine.toString());
++                } else {
++                    lines.add(currentLine.toString());
++                    currentLine = new StringBuilder();
++                    currentWidth = 0;
++                }
++            }
++        }
++        if (currentLine.length() > 0) {
++            lines.add(currentLine.toString());
++        }
++        if (lines.size() > 4) {
++            String lastLine = lines.get(3);
++            String ellipsis = "…";
++            int ellipsisWidth = fm.stringWidth(ellipsis);
++            while (fm.stringWidth(lastLine) + ellipsisWidth > maxWidth && lastLine.length() > 0) {
++                lastLine = lastLine.substring(0, lastLine.length() - 1);
++            }
++            lines.set(3, lastLine + ellipsis);
++            lines = lines.subList(0, 4);
++        }
++        return lines;
++    }
++
+     @Override
+     public void paint(Graphics g) {
+         super.paint(g);
+@@ -235,13 +283,20 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                 final int titleY = 629;
+                 final int contentX = 360;
+                 final int contentY = 670;
++                final int maxWidth = 400;
++                final int lineHeight = 30;
+ 
+                 g.drawImage(chat, 192, 590, this);
+                 g.setFont(chatFont);
+                 g.setColor(Color.white);
+ 
+                 g.drawString(npc[chatWith].getName() + ":", titleX, titleY);
+-                g.drawString(npc[chatWith].getWords(), contentX, contentY);
++                
++                FontMetrics fm = g.getFontMetrics();
++                java.util.List<String> lines = wrapText(npc[chatWith].getWords(), maxWidth, fm);
++                for (int j = 0; j < lines.size(); j++) {
++                    g.drawString(lines.get(j), contentX, contentY + j * lineHeight);
++                }
+             }
+ 
+             // 主角绘制
