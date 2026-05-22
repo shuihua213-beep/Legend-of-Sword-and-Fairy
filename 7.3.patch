@@ -1,0 +1,73 @@
+diff --git a/src/cn/tedu/xjqxz/GamePanel.java b/src/cn/tedu/xjqxz/GamePanel.java
+index d3300ce..4b5312f 100644
+--- a/src/cn/tedu/xjqxz/GamePanel.java
++++ b/src/cn/tedu/xjqxz/GamePanel.java
+@@ -27,6 +27,9 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+     int littleChick_i = 0;
+     int mall_i = 0;
+ 
++    // 调试倍速，1为正常，2为2倍速
++    int speedMultiplier = 1;
++
+     // 用于调节李家村市场场景变化速度
+     int changeSpeed = 0;
+     int[] count = new int[4];
+@@ -321,7 +324,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+ 
+             repaint();
+             try {
+-                Thread.sleep(200);
++                Thread.sleep(200 / speedMultiplier);
+             } catch (InterruptedException e) {
+                 e.printStackTrace();
+             }
+@@ -374,9 +377,12 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+     @Override
+     public void keyPressed(KeyEvent e) {
+         // 主角移动速度
+-        final int speed = 4;
++        final int speed = 4 * speedMultiplier;
+ 
+         switch (e.getKeyCode()) {
++            case KeyEvent.VK_T:
++                speedMultiplier = (speedMultiplier == 1) ? 2 : 1;
++                break;
+             case KeyEvent.VK_UP:
+                 role_dir = 3;
+                 hasChat = false;
+@@ -394,7 +400,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                 if (count[3] > 100) {
+                     count[3] = 0;
+                 }
+-                if (count[3] % 2 == 0) {
++                if (count[3] % Math.max(1, 2 / speedMultiplier) == 0) {
+                     updateRoleIndex();
+                 }
+                 repaint();
+@@ -418,7 +424,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                 if (count[0] > 100) {
+                     count[0] = 0;
+                 }
+-                if (count[0] % 2 == 0) {
++                if (count[0] % Math.max(1, 2 / speedMultiplier) == 0) {
+                     updateRoleIndex();
+                 }
+                 repaint();
+@@ -444,7 +450,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                     if (count[1] > 100) {
+                         count[1] = 0;
+                     }
+-                    if (count[1] % 2 == 0) {
++                    if (count[1] % Math.max(1, 2 / speedMultiplier) == 0) {
+                         updateRoleIndex();
+                     }
+                 }
+@@ -470,7 +476,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                 if (count[2] > 100) {
+                     count[2] = 0;
+                 }
+-                if (count[2] % 2 == 0) {
++                if (count[2] % Math.max(1, 2 / speedMultiplier) == 0) {
+                     updateRoleIndex();
+                 }
+ 
