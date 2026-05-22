@@ -1,0 +1,254 @@
+diff --git a/src/cn/tedu/xjqxz/GamePanel.java b/src/cn/tedu/xjqxz/GamePanel.java
+index d3300ce..85b3ba2 100644
+--- a/src/cn/tedu/xjqxz/GamePanel.java
++++ b/src/cn/tedu/xjqxz/GamePanel.java
+@@ -15,7 +15,15 @@ import java.io.IOException;
+  * @author fgksgf
+  */
+ public class GamePanel extends JPanel implements Runnable, KeyListener {
++    private static final int NORMAL_GAME_SPEED = 1;
++    private static final int DEBUG_GAME_SPEED = 2;
++    private static final int BASE_ROLE_MOVE_SPEED = 4;
++    private static final int BASE_ROLE_FRAME_INTERVAL = 2;
++    private static final long BASE_LOOP_SLEEP_MS = 200L;
++
+     Thread t;
++    private volatile int gameSpeedMultiplier = NORMAL_GAME_SPEED;
++    private boolean speedTogglePressed = false;
+     int role_dir = 0;
+     int role_i = 0;
+     int role_x = 152;
+@@ -157,6 +165,30 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+         t.start();
+     }
+ 
++    private void toggleGameSpeed() {
++        if (gameSpeedMultiplier == NORMAL_GAME_SPEED) {
++            gameSpeedMultiplier = DEBUG_GAME_SPEED;
++        } else {
++            gameSpeedMultiplier = NORMAL_GAME_SPEED;
++        }
++    }
++
++    private long getLoopSleepMillis() {
++        return Math.max(1L, Math.round((double) BASE_LOOP_SLEEP_MS / gameSpeedMultiplier));
++    }
++
++    private void updateRoleAnimation(int directionIndex) {
++        count[directionIndex]++;
++        if (count[directionIndex] > 100) {
++            count[directionIndex] = 0;
++        }
++
++        int frameInterval = Math.max(1, BASE_ROLE_FRAME_INTERVAL / gameSpeedMultiplier);
++        if (count[directionIndex] % frameInterval == 0) {
++            updateRoleIndex();
++        }
++    }
++
+     /**
+      * 改变配角图片
+      */
+@@ -321,7 +353,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+ 
+             repaint();
+             try {
+-                Thread.sleep(200);
++                Thread.sleep(getLoopSleepMillis());
+             } catch (InterruptedException e) {
+                 e.printStackTrace();
+             }
+@@ -339,17 +371,19 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+      */
+     @Override
+     public void keyReleased(KeyEvent e) {
++        if (e.getKeyCode() == KeyEvent.VK_T) {
++            speedTogglePressed = false;
++            return;
++        }
++
+         if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+-//            System.out.println(role_x + "," + role_y);
+             if (!hasChat && checkChat()) {
+                 hasChat = true;
+                 npc[chatWith].setChatOver(false);
+             } else if (hasChat && npc[chatWith].isChatOver()) {
+-                // 若聊天已经结束，则关闭聊天窗口
+                 hasChat = false;
+                 npc[chatWith].chatIndex = 0;
+             } else if (hasChat && !npc[chatWith].isChatOver()) {
+-                // 如果聊天未结束，则更新聊天内容
+                 npc[chatWith].updateChatContent();
+                 if (npc[chatWith].chatIndex == 0) {
+                     hasChat = false;
+@@ -357,7 +391,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+             }
+             repaint();
+         } else if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+-            // 按下回车键判断是否切换场景
+             if (mapID == 1 && role_x >= 1780 && role_x <= 1855 && role_y >= 530 && role_y <= 615) {
+                 mapID = 2;
+                 role_x = 0;
+@@ -373,29 +406,30 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+ 
+     @Override
+     public void keyPressed(KeyEvent e) {
+-        // 主角移动速度
+-        final int speed = 4;
++        if (e.getKeyCode() == KeyEvent.VK_T) {
++            if (!speedTogglePressed) {
++                speedTogglePressed = true;
++                toggleGameSpeed();
++            }
++            return;
++        }
+ 
+         switch (e.getKeyCode()) {
+             case KeyEvent.VK_UP:
+                 role_dir = 3;
+                 hasChat = false;
+-                role_y -= speed;
+-                int x = role_x + role[0][0].getWidth(null) / 2;
+-                int y = role_y + role[0][0].getHeight(null);
+-                if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
+-                    role_y += speed;
+-                } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
+-                    role_y += speed;
+-                }
+-
+-                // 调整角色步伐改变速度
+-                count[3]++;
+-                if (count[3] > 100) {
+-                    count[3] = 0;
+-                }
+-                if (count[3] % 2 == 0) {
+-                    updateRoleIndex();
++                for (int i = 0; i < gameSpeedMultiplier; i++) {
++                    role_y -= BASE_ROLE_MOVE_SPEED;
++                    int x = role_x + role[0][0].getWidth(null) / 2;
++                    int y = role_y + role[0][0].getHeight(null);
++                    if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
++                        role_y += BASE_ROLE_MOVE_SPEED;
++                        break;
++                    } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
++                        role_y += BASE_ROLE_MOVE_SPEED;
++                        break;
++                    }
++                    updateRoleAnimation(3);
+                 }
+                 repaint();
+                 break;
+@@ -403,23 +437,18 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+             case KeyEvent.VK_DOWN:
+                 role_dir = 0;
+                 hasChat = false;
+-                role_y += speed;
+-                x = role_x + role[0][0].getWidth(null) / 2;
+-                y = role_y + role[0][0].getHeight(null);
+-
+-                if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
+-                    role_y -= speed;
+-                } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
+-                    role_y -= speed;
+-                }
+-
+-                // 调整角色步伐改变速度
+-                count[0]++;
+-                if (count[0] > 100) {
+-                    count[0] = 0;
+-                }
+-                if (count[0] % 2 == 0) {
+-                    updateRoleIndex();
++                for (int i = 0; i < gameSpeedMultiplier; i++) {
++                    role_y += BASE_ROLE_MOVE_SPEED;
++                    int x = role_x + role[0][0].getWidth(null) / 2;
++                    int y = role_y + role[0][0].getHeight(null);
++                    if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
++                        role_y -= BASE_ROLE_MOVE_SPEED;
++                        break;
++                    } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
++                        role_y -= BASE_ROLE_MOVE_SPEED;
++                        break;
++                    }
++                    updateRoleAnimation(0);
+                 }
+                 repaint();
+                 break;
+@@ -427,26 +456,23 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+             case KeyEvent.VK_LEFT:
+                 role_dir = 1;
+                 hasChat = false;
++                for (int i = 0; i < gameSpeedMultiplier; i++) {
++                    if (role_x <= -16) {
++                        break;
++                    }
+ 
+-                if (role_x > -16) {
+-                    role_x -= speed;
+-                    x = role_x + role[0][0].getWidth(null) / 2;
+-                    y = role_y + role[0][0].getHeight(null);
++                    role_x -= BASE_ROLE_MOVE_SPEED;
++                    int x = role_x + role[0][0].getWidth(null) / 2;
++                    int y = role_y + role[0][0].getHeight(null);
+ 
+                     if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
+-                        role_x += speed;
++                        role_x += BASE_ROLE_MOVE_SPEED;
++                        break;
+                     } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
+-                        role_x += speed;
+-                    }
+-
+-                    // 调整角色步伐改变速度
+-                    count[1]++;
+-                    if (count[1] > 100) {
+-                        count[1] = 0;
+-                    }
+-                    if (count[1] % 2 == 0) {
+-                        updateRoleIndex();
++                        role_x += BASE_ROLE_MOVE_SPEED;
++                        break;
+                     }
++                    updateRoleAnimation(1);
+                 }
+                 repaint();
+                 break;
+@@ -454,26 +480,20 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+             case KeyEvent.VK_RIGHT:
+                 role_dir = 2;
+                 hasChat = false;
++                for (int i = 0; i < gameSpeedMultiplier; i++) {
++                    role_x += BASE_ROLE_MOVE_SPEED;
++                    int x = role_x + role[0][0].getWidth(null) / 2;
++                    int y = role_y + role[0][0].getHeight(null);
+ 
+-                role_x += speed;
+-                x = role_x + role[0][0].getWidth(null) / 2;
+-                y = role_y + role[0][0].getHeight(null);
+-
+-                if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
+-                    role_x -= speed;
+-                } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
+-                    role_x -= speed;
+-                }
+-
+-                // 调整角色步伐改变速度
+-                count[2]++;
+-                if (count[2] > 100) {
+-                    count[2] = 0;
+-                }
+-                if (count[2] % 2 == 0) {
+-                    updateRoleIndex();
++                    if (mapID == 1 && dataMap[0].getRGB(x, y) == -521461) {
++                        role_x -= BASE_ROLE_MOVE_SPEED;
++                        break;
++                    } else if (mapID == 2 && dataMap[1].getRGB(x, y) == -65536) {
++                        role_x -= BASE_ROLE_MOVE_SPEED;
++                        break;
++                    }
++                    updateRoleAnimation(2);
+                 }
+-
+                 repaint();
+                 break;
+ 
