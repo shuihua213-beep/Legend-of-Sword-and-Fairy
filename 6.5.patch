@@ -1,0 +1,107 @@
+diff --git a/src/cn/tedu/xjqxz/GamePanel.java b/src/cn/tedu/xjqxz/GamePanel.java
+index d3300ce..fb70915 100644
+--- a/src/cn/tedu/xjqxz/GamePanel.java
++++ b/src/cn/tedu/xjqxz/GamePanel.java
+@@ -70,6 +70,73 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+     private static String[] wcsWords = {"Hi", "I'm washing clothes."};
+     private static String[] childrenWords = {"Are you ok ?", "Let's play !"};
+ 
++    /**
++     * 文本自动换行工具方法
++     * @param text 要换行的文本
++     * @param maxWidth 最大宽度（像素）
++     * @param fm 字体度量
++     * @return 换行后的字符串数组
++     */
++    private String[] wrapText(String text, int maxWidth, FontMetrics fm) {
++        java.util.List<String> lines = new java.util.ArrayList<>();
++        StringBuilder currentLine = new StringBuilder();
++        
++        for (int i = 0; i < text.length(); i++) {
++            char c = text.charAt(i);
++            currentLine.append(c);
++            
++            // 检查当前行宽度
++            int currentWidth = fm.stringWidth(currentLine.toString());
++            
++            if (currentWidth > maxWidth) {
++                // 如果当前字符是英文单词的一部分，尝试回退到单词边界
++                if (c != ' ' && i > 0) {
++                    // 向前查找空格或中文
++                    int breakPoint = -1;
++                    for (int j = currentLine.length() - 1; j >= 0; j--) {
++                        char prevChar = currentLine.charAt(j);
++                        if (prevChar == ' ' || prevChar > 127) {
++                            breakPoint = j;
++                            break;
++                        }
++                    }
++                    
++                    if (breakPoint > 0) {
++                        // 在单词边界处断开
++                        lines.add(currentLine.substring(0, breakPoint + 1).trim());
++                        currentLine = new StringBuilder(currentLine.substring(breakPoint + 1));
++                    } else {
++                        // 无法找到边界，强制断开
++                        lines.add(currentLine.substring(0, currentLine.length() - 1).trim());
++                        currentLine = new StringBuilder(String.valueOf(c));
++                    }
++                } else {
++                    // 空格或中文直接换行
++                    lines.add(currentLine.toString().trim());
++                    currentLine = new StringBuilder();
++                }
++            }
++        }
++        
++        // 添加最后一行
++        if (currentLine.length() > 0) {
++            lines.add(currentLine.toString().trim());
++        }
++        
++        // 最多显示4行，超出用"..."截断
++        if (lines.size() > 4) {
++            lines = lines.subList(0, 4);
++            String lastLine = lines.get(3);
++            if (lastLine.length() > 1) {
++                lines.set(3, lastLine.substring(0, lastLine.length() - 1) + "...");
++            } else {
++                lines.set(3, lastLine + "...");
++            }
++        }
++        
++        return lines.toArray(new String[0]);
++    }
++
+     /**
+      * 加载素材图片
+      */
+@@ -233,15 +300,25 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+             if (hasChat && !npc[chatWith].isChatOver()) {
+                 final int titleX = 200;
+                 final int titleY = 629;
+-                final int contentX = 360;
+-                final int contentY = 670;
++                final int contentStartX = 220;
++                final int contentStartY = 670;
++                final int maxWidth = 600;
++                final int lineHeight = 30;
+ 
+                 g.drawImage(chat, 192, 590, this);
+                 g.setFont(chatFont);
+                 g.setColor(Color.white);
+ 
+                 g.drawString(npc[chatWith].getName() + ":", titleX, titleY);
+-                g.drawString(npc[chatWith].getWords(), contentX, contentY);
++                
++                // 获取字体度量并换行
++                FontMetrics fm = g.getFontMetrics(chatFont);
++                String[] lines = wrapText(npc[chatWith].getWords(), maxWidth, fm);
++                
++                // 逐行绘制文本，左对齐
++                for (int i = 0; i < lines.length; i++) {
++                    g.drawString(lines[i], contentStartX, contentStartY + i * lineHeight);
++                }
+             }
+ 
+             // 主角绘制
