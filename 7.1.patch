@@ -1,0 +1,42 @@
+diff --git a/src/cn/tedu/xjqxz/GamePanel.java b/src/cn/tedu/xjqxz/GamePanel.java
+index d3300ce..1a075db 100644
+--- a/src/cn/tedu/xjqxz/GamePanel.java
++++ b/src/cn/tedu/xjqxz/GamePanel.java
+@@ -26,6 +26,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+     int chick_i = 0;
+     int littleChick_i = 0;
+     int mall_i = 0;
++    double speedMultiplier = 1.0;
+ 
+     // 用于调节李家村市场场景变化速度
+     int changeSpeed = 0;
+@@ -321,7 +322,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+ 
+             repaint();
+             try {
+-                Thread.sleep(200);
++                Thread.sleep((long) (200 / speedMultiplier));
+             } catch (InterruptedException e) {
+                 e.printStackTrace();
+             }
+@@ -374,7 +375,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+     @Override
+     public void keyPressed(KeyEvent e) {
+         // 主角移动速度
+-        final int speed = 4;
++        final int baseSpeed = 4;
++        int speed = (int) (baseSpeed * speedMultiplier);
+ 
+         switch (e.getKeyCode()) {
+             case KeyEvent.VK_UP:
+@@ -489,6 +491,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
+                 }
+                 repaint();
+                 break;
++
++            case KeyEvent.VK_T:
++                speedMultiplier = (speedMultiplier == 1.0) ? 2.0 : 1.0;
++                break;
+         }
+     }
+ }
