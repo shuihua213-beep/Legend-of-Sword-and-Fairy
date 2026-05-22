@@ -70,6 +70,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     private static String[] wcsWords = {"Hi", "I'm washing clothes."};
     private static String[] childrenWords = {"Are you ok ?", "Let's play !"};
 
+    private static final int BASE_MOVE_SPEED = 4;
+    private static final int BASE_SLEEP_MS = 200;
+    private int speedMultiplier = 1;
+
     /**
      * 加载素材图片
      */
@@ -321,7 +325,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
             repaint();
             try {
-                Thread.sleep(200);
+                Thread.sleep(BASE_SLEEP_MS / speedMultiplier);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -374,7 +378,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     @Override
     public void keyPressed(KeyEvent e) {
         // 主角移动速度
-        final int speed = 4;
+        final int speed = BASE_MOVE_SPEED * speedMultiplier;
 
         switch (e.getKeyCode()) {
             case KeyEvent.VK_UP:
@@ -475,6 +479,14 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 }
 
                 repaint();
+                break;
+
+            case KeyEvent.VK_T:
+                if (speedMultiplier == 1) {
+                    speedMultiplier = 2;
+                } else {
+                    speedMultiplier = 1;
+                }
                 break;
 
             case KeyEvent.VK_ESCAPE:
