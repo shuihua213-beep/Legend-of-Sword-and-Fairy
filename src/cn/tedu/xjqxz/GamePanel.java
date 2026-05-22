@@ -8,6 +8,8 @@ import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 游戏项目的画板类，即界面文件
@@ -194,6 +196,56 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
     }
 
+    private List<String> wrapText(String text, int maxWidth, FontMetrics fm) {
+        List<String> lines = new ArrayList<>();
+        if (text == null || text.isEmpty()) {
+            return lines;
+        }
+
+        int lineStart = 0;
+        int lastBreakPos = -1;
+
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+
+            if (isBreakableChar(c)) {
+                lastBreakPos = i;
+            }
+
+            if (fm.stringWidth(text.substring(lineStart, i + 1)) > maxWidth) {
+                int breakAt;
+                if (lastBreakPos >= lineStart) {
+                    breakAt = lastBreakPos + 1;
+                } else {
+                    breakAt = i;
+                }
+                lines.add(text.substring(lineStart, breakAt));
+                lineStart = breakAt;
+                while (lineStart < text.length() && text.charAt(lineStart) == ' ') {
+                    lineStart++;
+                }
+                i = lineStart - 1;
+                lastBreakPos = -1;
+            }
+        }
+
+        if (lineStart < text.length()) {
+            lines.add(text.substring(lineStart));
+        }
+
+        return lines;
+    }
+
+    private boolean isBreakableChar(char c) {
+        if (c >= '\u4E00' && c <= '\u9FFF') return true;
+        if (c >= '\u3000' && c <= '\u303F') return true;
+        if (c >= '\uFF00' && c <= '\uFFEF') return true;
+        if (c == ' ') return true;
+        if (c == ',' || c == '.' || c == '!' || c == '?' || c == ';' || c == ':') return true;
+        if (c == '\uFF0C' || c == '\u3002' || c == '\uFF01' || c == '\uFF1F' || c == '\uFF1B' || c == '\uFF1A') return true;
+        return false;
+    }
+
     @Override
     public void paint(Graphics g) {
         super.paint(g);
@@ -235,13 +287,32 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 final int titleY = 629;
                 final int contentX = 360;
                 final int contentY = 670;
+                final int maxContentWidth = 400;
+                final int lineSpacing = 30;
+                final int maxLines = 4;
 
                 g.drawImage(chat, 192, 590, this);
                 g.setFont(chatFont);
                 g.setColor(Color.white);
 
                 g.drawString(npc[chatWith].getName() + ":", titleX, titleY);
-                g.drawString(npc[chatWith].getWords(), contentX, contentY);
+
+                FontMetrics fm = g.getFontMetrics(chatFont);
+                List<String> wrappedLines = wrapText(npc[chatWith].getWords(), maxContentWidth, fm);
+                int linesToShow = Math.min(wrappedLines.size(), maxLines);
+                boolean truncated = wrappedLines.size() > maxLines;
+
+                for (int i = 0; i < linesToShow; i++) {
+                    String line = wrappedLines.get(i);
+                    if (truncated && i == maxLines - 1) {
+                        String ellipsis = "…";
+                        while (fm.stringWidth(line + ellipsis) > maxContentWidth && line.length() > 0) {
+                            line = line.substring(0, line.length() - 1);
+                        }
+                        line = line + ellipsis;
+                    }
+                    g.drawString(line, contentX, contentY + i * lineSpacing);
+                }
             }
 
             // 主角绘制
