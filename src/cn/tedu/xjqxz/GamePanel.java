@@ -235,13 +235,24 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 final int titleY = 629;
                 final int contentX = 360;
                 final int contentY = 670;
+                final int maxLineWidth = 400; // 对话框内容区域宽度
+                final int lineHeight = 30;    // 行距
 
                 g.drawImage(chat, 192, 590, this);
                 g.setFont(chatFont);
                 g.setColor(Color.white);
 
                 g.drawString(npc[chatWith].getName() + ":", titleX, titleY);
-                g.drawString(npc[chatWith].getWords(), contentX, contentY);
+                
+                String fullText = npc[chatWith].getWords();
+                FontMetrics fm = g.getFontMetrics(chatFont);
+                java.util.List<String> lines = wrapText(fullText, maxLineWidth, fm);
+                
+                int drawY = contentY;
+                for (String line : lines) {
+                    g.drawString(line, contentX, drawY);
+                    drawY += lineHeight;
+                }
             }
 
             // 主角绘制
@@ -271,6 +282,85 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             // 主角绘制
             g.drawImage(role[role_dir][role_i], role_x + mallX, role_y + mallY, this);
         }
+    }
+
+    private java.util.List<String> wrapText(String text, int maxWidth, FontMetrics fm) {
+        java.util.List<String> lines = new java.util.ArrayList<>();
+        if (text == null || text.isEmpty()) {
+            return lines;
+        }
+
+        StringBuilder currentLine = new StringBuilder();
+        StringBuilder currentWord = new StringBuilder();
+
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            
+            // Check if character is part of an English word
+            boolean isEnglishChar = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '\'' || c == '-';
+
+            if (isEnglishChar) {
+                currentWord.append(c);
+            } else {
+                // Process the accumulated word first
+                if (currentWord.length() > 0) {
+                    if (fm.stringWidth(currentLine.toString() + currentWord.toString()) > maxWidth) {
+                        if (currentLine.length() > 0) {
+                            lines.add(currentLine.toString());
+                            currentLine.setLength(0);
+                        }
+                    }
+                    currentLine.append(currentWord.toString());
+                    currentWord.setLength(0);
+                }
+
+                // Process the non-English character
+                if (c == '\n') {
+                    lines.add(currentLine.toString());
+                    currentLine.setLength(0);
+                } else {
+                    if (fm.stringWidth(currentLine.toString() + c) > maxWidth) {
+                        if (currentLine.length() > 0) {
+                            lines.add(currentLine.toString());
+                            currentLine.setLength(0);
+                        }
+                    }
+                    // Skip leading spaces on a new line
+                    if (currentLine.length() == 0 && c == ' ') {
+                        continue;
+                    }
+                    currentLine.append(c);
+                }
+            }
+        }
+
+        // Process any remaining word
+        if (currentWord.length() > 0) {
+            if (fm.stringWidth(currentLine.toString() + currentWord.toString()) > maxWidth) {
+                if (currentLine.length() > 0) {
+                    lines.add(currentLine.toString());
+                    currentLine.setLength(0);
+                }
+            }
+            currentLine.append(currentWord.toString());
+        }
+
+        if (currentLine.length() > 0) {
+            lines.add(currentLine.toString());
+        }
+
+        // Apply 4 lines limit and ellipsis
+        if (lines.size() > 4) {
+            java.util.List<String> truncatedLines = new java.util.ArrayList<>(lines.subList(0, 4));
+            String lastLine = truncatedLines.get(3);
+            while (lastLine.length() > 0 && fm.stringWidth(lastLine + "...") > maxWidth) {
+                lastLine = lastLine.substring(0, lastLine.length() - 1);
+            }
+            truncatedLines.set(3, lastLine + "...");
+            return truncatedLines;
+        }
+
+        return lines;
     }
 
     /**
