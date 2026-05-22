@@ -8,6 +8,8 @@ import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 游戏项目的画板类，即界面文件
@@ -234,14 +236,22 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 final int titleX = 200;
                 final int titleY = 629;
                 final int contentX = 360;
-                final int contentY = 670;
+                final int contentY = 648;
+                final int contentWidth = 400;
+                final int lineHeight = 30;
+                final int maxLines = 4;
 
                 g.drawImage(chat, 192, 590, this);
                 g.setFont(chatFont);
                 g.setColor(Color.white);
 
+                FontMetrics fm = g.getFontMetrics(chatFont);
+                List<String> lines = wrapText(npc[chatWith].getWords(), contentWidth, fm);
+
                 g.drawString(npc[chatWith].getName() + ":", titleX, titleY);
-                g.drawString(npc[chatWith].getWords(), contentX, contentY);
+                for (int i = 0; i < Math.min(lines.size(), maxLines); i++) {
+                    g.drawString(lines.get(i), contentX, contentY + i * lineHeight);
+                }
             }
 
             // 主角绘制
@@ -271,6 +281,136 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             // 主角绘制
             g.drawImage(role[role_dir][role_i], role_x + mallX, role_y + mallY, this);
         }
+    }
+
+    private List<String> wrapText(String text, int maxWidth, FontMetrics fm) {
+        List<String> lines = new ArrayList<String>();
+        if (text == null || text.length() == 0) {
+            return lines;
+        }
+
+        List<String> tokens = new ArrayList<String>();
+        StringBuilder wordBuilder = new StringBuilder();
+        for (int i = 0; i < text.length(); i++) {
+            char ch = text.charAt(i);
+            if (Character.isWhitespace(ch)) {
+                if (wordBuilder.length() > 0) {
+                    tokens.add(wordBuilder.toString());
+                    wordBuilder.setLength(0);
+                }
+                tokens.add(String.valueOf(ch));
+            } else if (isChineseCharacter(ch)) {
+                if (wordBuilder.length() > 0) {
+                    tokens.add(wordBuilder.toString());
+                    wordBuilder.setLength(0);
+                }
+                tokens.add(String.valueOf(ch));
+            } else {
+                wordBuilder.append(ch);
+            }
+        }
+        if (wordBuilder.length() > 0) {
+            tokens.add(wordBuilder.toString());
+        }
+
+        StringBuilder currentLine = new StringBuilder();
+        for (String token : tokens) {
+            String nextToken = currentLine.length() == 0 ? token.replaceFirst("^\\s+", "") : token;
+            if (nextToken.length() == 0) {
+                continue;
+            }
+
+            String candidate = currentLine.toString() + nextToken;
+            if (fm.stringWidth(candidate) <= maxWidth) {
+                currentLine.append(nextToken);
+                continue;
+            }
+
+            if (currentLine.length() > 0) {
+                lines.add(currentLine.toString().trim());
+                currentLine.setLength(0);
+                String trimmedToken = nextToken.replaceFirst("^\\s+", "");
+                if (trimmedToken.length() == 0) {
+                    continue;
+                }
+                if (fm.stringWidth(trimmedToken) <= maxWidth) {
+                    currentLine.append(trimmedToken);
+                } else {
+                    appendLongToken(lines, trimmedToken, maxWidth, fm);
+                }
+            } else {
+                appendLongToken(lines, nextToken.trim(), maxWidth, fm);
+            }
+        }
+
+        if (currentLine.length() > 0) {
+            lines.add(currentLine.toString().trim());
+        }
+
+        List<String> normalizedLines = new ArrayList<String>();
+        for (String line : lines) {
+            if (line != null && line.length() > 0) {
+                normalizedLines.add(line);
+            }
+        }
+
+        if (normalizedLines.size() > 4) {
+            List<String> limitedLines = new ArrayList<String>(normalizedLines.subList(0, 4));
+            limitedLines.set(3, trimToWidthWithEllipsis(limitedLines.get(3), maxWidth, fm));
+            return limitedLines;
+        }
+
+        return normalizedLines;
+    }
+
+    private void appendLongToken(List<String> lines, String token, int maxWidth, FontMetrics fm) {
+        if (token == null || token.length() == 0) {
+            return;
+        }
+
+        StringBuilder segment = new StringBuilder();
+        for (int i = 0; i < token.length(); i++) {
+            char ch = token.charAt(i);
+            String candidate = segment.toString() + ch;
+            if (segment.length() > 0 && fm.stringWidth(candidate) > maxWidth) {
+                lines.add(segment.toString());
+                segment.setLength(0);
+            }
+            segment.append(ch);
+        }
+
+        if (segment.length() > 0) {
+            lines.add(segment.toString());
+        }
+    }
+
+    private String trimToWidthWithEllipsis(String text, int maxWidth, FontMetrics fm) {
+        String ellipsis = "…";
+        if (text == null || text.length() == 0) {
+            return ellipsis;
+        }
+        if (fm.stringWidth(text) <= maxWidth) {
+            if (fm.stringWidth(text + ellipsis) <= maxWidth) {
+                return text + ellipsis;
+            }
+        }
+
+        StringBuilder builder = new StringBuilder(text);
+        while (builder.length() > 0 && fm.stringWidth(builder.toString() + ellipsis) > maxWidth) {
+            builder.deleteCharAt(builder.length() - 1);
+        }
+        return builder.toString().trim() + ellipsis;
+    }
+
+    private boolean isChineseCharacter(char ch) {
+        Character.UnicodeBlock block = Character.UnicodeBlock.of(ch);
+        return block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS
+                || block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A
+                || block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_B
+                || block == Character.UnicodeBlock.CJK_COMPATIBILITY_IDEOGRAPHS
+                || block == Character.UnicodeBlock.CJK_SYMBOLS_AND_PUNCTUATION
+                || block == Character.UnicodeBlock.HALFWIDTH_AND_FULLWIDTH_FORMS
+                || block == Character.UnicodeBlock.GENERAL_PUNCTUATION;
     }
 
     /**
