@@ -235,31 +235,13 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 final int titleY = 629;
                 final int contentX = 360;
                 final int contentY = 670;
-                final int maxLineWidth = 400;
-                final int lineHeight = 30;
-                final int maxLines = 4;
 
                 g.drawImage(chat, 192, 590, this);
                 g.setFont(chatFont);
                 g.setColor(Color.white);
 
                 g.drawString(npc[chatWith].getName() + ":", titleX, titleY);
-
-                FontMetrics fm = g.getFontMetrics(chatFont);
-                java.util.List<String> lines = wrapText(npc[chatWith].getWords(), maxLineWidth, fm);
-
-                int drawY = contentY;
-                for (int i = 0; i < lines.size() && i < maxLines; i++) {
-                    String line = lines.get(i);
-                    if (i == maxLines - 1 && lines.size() > maxLines) {
-                        while (line.length() > 0 && fm.stringWidth(line + "...") > maxLineWidth) {
-                            line = line.substring(0, line.length() - 1);
-                        }
-                        line = line + "...";
-                    }
-                    g.drawString(line, contentX, drawY);
-                    drawY += lineHeight;
-                }
+                g.drawString(npc[chatWith].getWords(), contentX, contentY);
             }
 
             // 主角绘制
@@ -289,71 +271,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             // 主角绘制
             g.drawImage(role[role_dir][role_i], role_x + mallX, role_y + mallY, this);
         }
-    }
-
-    private java.util.List<String> wrapText(String text, int maxWidth, FontMetrics fm) {
-        java.util.List<String> lines = new java.util.ArrayList<>();
-        if (text == null || text.isEmpty()) {
-            return lines;
-        }
-
-        StringBuilder line = new StringBuilder();
-        StringBuilder word = new StringBuilder();
-
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            boolean isEnglishChar = (c >= 'a' && c <= 'z')
-                    || (c >= 'A' && c <= 'Z')
-                    || (c >= '0' && c <= '9')
-                    || c == '\'' || c == '-';
-
-            if (isEnglishChar) {
-                word.append(c);
-            } else {
-                if (word.length() > 0) {
-                    if (fm.stringWidth(line.toString() + word.toString()) > maxWidth) {
-                        if (line.length() > 0) {
-                            lines.add(line.toString());
-                            line.setLength(0);
-                        }
-                    }
-                    line.append(word.toString());
-                    word.setLength(0);
-                }
-
-                if (c == '\n') {
-                    lines.add(line.toString());
-                    line.setLength(0);
-                } else {
-                    if (fm.stringWidth(line.toString() + c) > maxWidth) {
-                        if (line.length() > 0) {
-                            lines.add(line.toString());
-                            line.setLength(0);
-                        }
-                    }
-                    if (line.length() == 0 && c == ' ') {
-                        continue;
-                    }
-                    line.append(c);
-                }
-            }
-        }
-
-        if (word.length() > 0) {
-            if (fm.stringWidth(line.toString() + word.toString()) > maxWidth) {
-                if (line.length() > 0) {
-                    lines.add(line.toString());
-                    line.setLength(0);
-                }
-            }
-            line.append(word.toString());
-        }
-
-        if (line.length() > 0) {
-            lines.add(line.toString());
-        }
-
-        return lines;
     }
 
     /**
